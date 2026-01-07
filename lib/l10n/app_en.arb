@@ -1,0 +1,135 @@
+{
+  "@@locale": "en",
+  "selectLanguage": "Select Your Preferred Language",
+  "@selectLanguage": {
+    "description": "Title for language selection modal"
+  },
+  "continue_": "Continue",
+  "@continue_": {
+    "description": "Continue button text"
+  },
+  "french": "Français",
+  "@french": {
+    "description": "French language option"
+  },
+  "arabic": "عربي",
+  "@arabic": {
+    "description": "Arabic language option"
+  },
+  "english": "English",
+  "@english": {
+    "description": "English language option"
+  },
+  "loginOrSignUp": "Login or Sign up",
+  "@loginOrSignUp": {
+    "description": "Section title for login/register"
+  },
+  "enterWhatsappNumber": "Enter your whatsapp number",
+  "@enterWhatsappNumber": {
+    "description": "Placeholder for phone number input"
+  },
+  "otpVerification": "OTP Verification",
+  "@otpVerification": {
+    "description": "OTP verification screen title"
+  },
+  "otpSentMessage": "We've sent a verification code to your WhatsApp",
+  "@otpSentMessage": {
+    "description": "Message shown after OTP is sent"
+  },
+  "resendCodeIn": "Resend code in {seconds} sec",
+  "@resendCodeIn": {
+    "description": "Resend code timer message",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "didntGetOtp": "Didn't get the OTP?",
+  "@didntGetOtp": {
+    "description": "Text before resend OTP link"
+  },
+  "resendOtp": "Resend OTP",
+  "@resendOtp": {
+    "description": "Resend OTP link text"
+  },
+  "whatsYourName": "What's your name?",
+  "@whatsYourName": {
+    "description": "Name input screen title"
+  },
+  "enterYourName": "Enter your name",
+  "@enterYourName": {
+    "description": "Placeholder for name input"
+  },
+  "done": "Done",
+  "@done": {
+    "description": "Done button text"
+  },
+  "dontHaveAccount": "Don't have an account? Sign up",
+  "@dontHaveAccount": {
+    "description": "Link to register screen"
+  },
+  "alreadyHaveAccount": "Already have an account? Login",
+  "@alreadyHaveAccount": {
+    "description": "Link to login screen"
+  },
+  "loginSuccessful": "Login successful!",
+  "@loginSuccessful": {
+    "description": "Success message after login"
+  },
+  "registrationSuccessful": "Registration successful! Welcome {name}",
+  "@registrationSuccessful": {
+    "description": "Success message after registration",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "welcomeMessage": "Nam eget turpis ultricies, sollicitudin massa eu, convallis felis.",
+  "@welcomeMessage": {
+    "description": "Welcome/description text on login/register screens"
+  },
+  "guestLogin": "Guest Login",
+  "@guestLogin": {
+    "description": "Guest login button text"
+  },
+  "home": "Home",
+  "chat": "Chat",
+  "sell": "Sell",
+  "wishlist": "Wishlist",
+  "profile": "Profile",
+  "categories": "Categories",
+  "recentlyAdded": "Recently Added",
+  "recommendationsForYou": "Recommendations for You",
+  "grainsCereals": "Grains & Cereals",
+  "vegetables": "Vegetables",
+  "livestockMeat": "Livestock & Meat",
+  "poultryEggs": "Poultry & Eggs",
+  "aboutUs": "About us OUR FARM WHO WE ARE",
+  "available": "{quantity} Kg Available",
+  "@available": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "pricePerKg": "{price} MRU / Kg",
+  "@pricePerKg": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "daysAgo": "{days} day ago",
+  "@daysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
+}
+

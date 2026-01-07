@@ -1,0 +1,76 @@
+{
+  "@@locale": "fr",
+  "selectLanguage": "Sélectionnez votre langue préférée",
+  "continue_": "Continuer",
+  "french": "Français",
+  "arabic": "عربي",
+  "english": "Anglais",
+  "loginOrSignUp": "Connexion ou Inscription",
+  "enterWhatsappNumber": "Entrez votre numéro WhatsApp",
+  "otpVerification": "Vérification OTP",
+  "otpSentMessage": "Nous avons envoyé un code de vérification à votre WhatsApp",
+  "resendCodeIn": "Renvoyer le code dans {seconds} sec",
+  "@resendCodeIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "didntGetOtp": "Vous n'avez pas reçu l'OTP?",
+  "resendOtp": "Renvoyer l'OTP",
+  "whatsYourName": "Quel est votre nom?",
+  "enterYourName": "Entrez votre nom",
+  "done": "Terminé",
+  "dontHaveAccount": "Vous n'avez pas de compte? S'inscrire",
+  "alreadyHaveAccount": "Vous avez déjà un compte? Connexion",
+  "loginSuccessful": "Connexion réussie!",
+  "registrationSuccessful": "Inscription réussie! Bienvenue {name}",
+  "@registrationSuccessful": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "welcomeMessage": "Nam eget turpis ultricies, sollicitudin massa eu, convallis felis.",
+  "guestLogin": "Connexion invité",
+  "home": "Accueil",
+  "chat": "Chat",
+  "sell": "Vendre",
+  "wishlist": "Liste de souhaits",
+  "profile": "Profil",
+  "categories": "Catégories",
+  "recentlyAdded": "Récemment ajouté",
+  "recommendationsForYou": "Recommandations pour vous",
+  "grainsCereals": "Céréales et grains",
+  "vegetables": "Légumes",
+  "livestockMeat": "Bétail et viande",
+  "poultryEggs": "Volaille et œufs",
+  "aboutUs": "À propos de nous NOTRE FERME QUI NOUS SOMMES",
+  "available": "{quantity} Kg Disponible",
+  "@available": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "pricePerKg": "{price} MRU / Kg",
+  "@pricePerKg": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "daysAgo": "Il y a {days} jour",
+  "@daysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
+}
+

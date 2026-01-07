@@ -1,0 +1,27 @@
+config_version: 1.0
+project_id: YOUR_PROJECT_ID  # Replace with your Localizely Project ID
+file_type: flutter_arb
+branch: main
+
+upload:
+  files:
+    - file: lib/l10n/app_en.arb
+      locale_code: en
+    - file: lib/l10n/app_fr.arb
+      locale_code: fr
+    - file: lib/l10n/app_ar.arb
+      locale_code: ar
+  params:
+    overwrite: true
+    reviewed: false
+
+download:
+  files:
+    - file: lib/l10n/app_en.arb
+      locale_code: en
+    - file: lib/l10n/app_fr.arb
+      locale_code: fr
+    - file: lib/l10n/app_ar.arb
+      locale_code: ar
+  params:
+    export_empty_as: empty

@@ -1,0 +1,76 @@
+{
+  "@@locale": "ar",
+  "selectLanguage": "اختر لغتك المفضلة",
+  "continue_": "متابعة",
+  "french": "Français",
+  "arabic": "عربي",
+  "english": "English",
+  "loginOrSignUp": "تسجيل الدخول أو التسجيل",
+  "enterWhatsappNumber": "أدخل رقم الواتساب الخاص بك",
+  "otpVerification": "التحقق من رمز OTP",
+  "otpSentMessage": "لقد أرسلنا رمز التحقق إلى واتسابك",
+  "resendCodeIn": "إعادة إرسال الرمز خلال {seconds} ثانية",
+  "@resendCodeIn": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "didntGetOtp": "لم تستلم رمز OTP؟",
+  "resendOtp": "إعادة إرسال رمز OTP",
+  "whatsYourName": "ما هو اسمك؟",
+  "enterYourName": "أدخل اسمك",
+  "done": "تم",
+  "dontHaveAccount": "ليس لديك حساب؟ سجل",
+  "alreadyHaveAccount": "لديك حساب بالفعل؟ تسجيل الدخول",
+  "loginSuccessful": "تم تسجيل الدخول بنجاح!",
+  "registrationSuccessful": "تم التسجيل بنجاح! مرحباً {name}",
+  "@registrationSuccessful": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "welcomeMessage": "Nam eget turpis ultricies, sollicitudin massa eu, convallis felis.",
+  "guestLogin": "تسجيل الدخول كضيف",
+  "home": "الرئيسية",
+  "chat": "الدردشة",
+  "sell": "بيع",
+  "wishlist": "قائمة الأمنيات",
+  "profile": "الملف الشخصي",
+  "categories": "الفئات",
+  "recentlyAdded": "المضاف حديثاً",
+  "recommendationsForYou": "التوصيات لك",
+  "grainsCereals": "الحبوب والحنطة",
+  "vegetables": "الخضروات",
+  "livestockMeat": "الماشية واللحوم",
+  "poultryEggs": "الدواجن والبيض",
+  "aboutUs": "من نحن مزرعتنا من نحن",
+  "available": "{quantity} كجم متاح",
+  "@available": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "pricePerKg": "{price} أوقية / كجم",
+  "@pricePerKg": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "daysAgo": "منذ {days} يوم",
+  "@daysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
+}
+
