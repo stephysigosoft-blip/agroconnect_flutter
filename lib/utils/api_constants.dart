@@ -8,4 +8,5 @@ class ApiConstants {
   static const String getTermsAndConditions = 'get-terms-and-conditions';
   static const String getAbout = 'get-about';
   static const String getContact = 'get-contact';
+  static const String getPrivacyPolicy = 'get-privacy-policy';
 }

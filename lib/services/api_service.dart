@@ -115,6 +115,18 @@ class ApiService extends get_pkg.GetxService {
     }
   }
 
+  Future<Map<String, dynamic>?> getPrivacyPolicy() async {
+    try {
+      final response = await _dio.get(ApiConstants.getPrivacyPolicy);
+      if (response.data != null && response.data is Map) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> getContact() async {
     try {
       final response = await _dio.get(ApiConstants.getContact);
