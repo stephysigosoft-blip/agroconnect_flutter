@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../controllers/chat_controller.dart';
 import '../../controllers/home_controller.dart';
+import 'chat_screen.dart';
 
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({super.key});
@@ -93,6 +94,11 @@ class ChatListScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Expanded(
             child: Obx(() {
+              if (controller.isFetchingThreads.value &&
+                  controller.threads.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
               if (controller.threads.isEmpty) {
                 return const Center(
                   child: Text(
@@ -101,12 +107,19 @@ class ChatListScreen extends StatelessWidget {
                   ),
                 );
               }
-              return ListView.builder(
-                itemCount: controller.threads.length,
-                itemBuilder: (context, index) {
-                  final thread = controller.threads[index];
-                  return _ChatListItem(thread: thread);
+              return RefreshIndicator(
+                onRefresh: () async {
+                  await controller.fetchThreads();
                 },
+                color: const Color(0xFF1B834F),
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: controller.threads.length,
+                  itemBuilder: (context, index) {
+                    final thread = controller.threads[index];
+                    return _ChatListItem(thread: thread);
+                  },
+                ),
               );
             }),
           ),
@@ -125,119 +138,198 @@ class _ChatListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = Get.find<ChatController>();
 
-    return InkWell(
-      onTap: () => Get.toNamed('/chat', arguments: thread),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                thread.avatarPath,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
+    return Obx(() {
+      final String pId = thread.productId;
+      final cached = ChatThread.productCache[pId];
+
+      final String currentTitle =
+          (cached?.name ?? '').isNotEmpty ? cached!.name : thread.title;
+
+      final String cachedImage = cached?.image ?? '';
+      final String currentAvatar =
+          cachedImage.isNotEmpty ? cachedImage : thread.avatarPath;
+
+      final bool hasUnread = thread.unreadCount > 0;
+
+      return InkWell(
+        onTap: () => Get.to(() => const ChatScreen(), arguments: thread),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child:
+                    currentAvatar.isNotEmpty && currentAvatar.startsWith('http')
+                        ? Image.network(
+                          currentAvatar,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (context, error, stackTrace) => Container(
+                                width: 48,
+                                height: 48,
+                                color: Colors.grey.shade100,
+                                child: const Icon(
+                                  Icons.inventory_2,
+                                  size: 24,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                        )
+                        : Container(
+                          width: 48,
+                          height: 48,
+                          color: Colors.grey.shade100,
+                          child: const Icon(
+                            Icons.inventory_2,
+                            size: 24,
+                            color: Colors.grey,
+                          ),
+                        ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        thread.title,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
-                      ),
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.grey.shade300,
-                            // width: 1,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            currentTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight:
+                                  hasUnread ? FontWeight.bold : FontWeight.w600,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
-                        child: PopupMenuButton<String>(
-                          padding: EdgeInsets.zero,
-                          icon: Icon(
-                            Icons.more_vert,
-                            size: 16,
-                            color: Colors.black,
+                        Container(
+                          width: 28,
+                          height: 28,
+                          margin: const EdgeInsets.only(left: 4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey.shade300),
                           ),
-                          onSelected: (value) {
-                            if (value == 'delete') {
-                              controller.deleteThread(thread.id);
-                            } else if (value == 'report') {
-                              // TODO: implement report
-                            }
-                          },
-                          itemBuilder:
-                              (context) => [
-                                PopupMenuItem(
-                                  value: 'report',
-                                  child: Row(
-                                    children: const [
-                                      Icon(Icons.flag_outlined, size: 18),
-                                      SizedBox(width: 8),
-                                      Text('Report Chat'),
-                                    ],
+                          child: PopupMenuButton<String>(
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(
+                              Icons.more_vert,
+                              size: 16,
+                              color: Colors.black,
+                            ),
+                            onSelected: (value) {
+                              if (value == 'delete') {
+                                controller.deleteThread(thread.id);
+                              }
+                            },
+                            itemBuilder:
+                                (context) => [
+                                  const PopupMenuItem(
+                                    value: 'report',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.flag_outlined, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('Report Chat'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.delete_outline, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('Delete Chat'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            thread.lastMessage.isEmpty
+                                ? 'No messages yet'
+                                : thread.lastMessage,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color:
+                                  hasUnread
+                                      ? Colors.black87
+                                      : Colors.grey.shade800,
+                              fontWeight:
+                                  hasUnread
+                                      ? FontWeight.w500
+                                      : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              thread.timeLabel,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color:
+                                    hasUnread
+                                        ? const Color(0xFF1B834F)
+                                        : Colors.grey.shade700,
+                                fontWeight:
+                                    hasUnread
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                              ),
+                            ),
+                            if (hasUnread)
+                              Container(
+                                margin: const EdgeInsets.only(top: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF1B834F),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  thread.unreadCount.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: const [
-                                      Icon(Icons.delete_outline, size: 18),
-                                      SizedBox(width: 8),
-                                      Text('Delete Chat'),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                              ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          thread.lastMessage,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade800,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        thread.timeLabel,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }

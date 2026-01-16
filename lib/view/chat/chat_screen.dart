@@ -1,7 +1,8 @@
-import 'dart:developer';
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../controllers/chat_controller.dart';
 import '../../utils/invoice_pdf_helper.dart';
@@ -16,9 +17,11 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
-  final RxList<_ChatMessage> _messages = <_ChatMessage>[].obs;
+  late final ChatController _chatController;
+  final ScrollController _scrollController = ScrollController();
+  Worker? _scrollWorker;
 
-  late final ChatThread thread;
+  ChatThread? thread;
   InvoiceData? _pendingInvoice;
   final ImagePicker _picker = ImagePicker();
 
@@ -26,14 +29,12 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final XFile? image = await _picker.pickImage(source: source);
       if (image != null) {
-        // Handle picked image (e.g., send it as a message or show preview)
-        _messages.add(
-          _ChatMessage(
-            imagePath: image.path,
-            timeLabel: TimeOfDay.now().format(context),
-            isMe: true,
-            type: ChatMessageType.image,
-          ),
+        _chatController.sendMessageApi(
+          thread!.id,
+          image.path,
+          type: 'image',
+          filePath: image.path,
+          productId: thread!.productId,
         );
       }
     } catch (e) {
@@ -44,40 +45,40 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    thread = Get.arguments as ChatThread;
+    _chatController = Get.put(ChatController());
+    final args = Get.arguments;
+    if (args is ChatThread) {
+      thread = args;
+    } else {
+      // Fallback: If no thread exists, we can't show this screen.
+      // We pop back immediately to prevent a crash.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Get.back();
+      });
+      return;
+    }
 
-    // Seed with sample messages (to match design)
-    _messages.addAll([
-      _ChatMessage(
-        text: 'Hi',
-        timeLabel: '10:00 AM',
-        isMe: true,
-        type: ChatMessageType.text,
-      ),
-      _ChatMessage(
-        text: 'Hi',
-        timeLabel: '10:00 AM',
-        isMe: false,
-        type: ChatMessageType.text,
-      ),
-      _ChatMessage(
-        text:
-            'Etiam at vulputate dui. Ut venenatis nisi id vestibulum posuere. Vestibulum consectetur',
-        timeLabel: '10:15 AM',
-        isMe: true,
-        type: ChatMessageType.text,
-      ),
-      _ChatMessage(
-        imagePath: 'lib/assets/images/categories/Rounded rectangle.png',
-        timeLabel: '',
-        isMe: false,
-        type: ChatMessageType.image,
-      ),
-    ]);
+    _chatController.fetchMessages(thread!.id);
+
+    // Auto-scroll to bottom on new messages
+    _scrollWorker = ever(_chatController.messages, (_) {
+      if (_scrollController.hasClients) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted && _scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+    });
   }
 
-  Widget _buildInvoiceBubble(_ChatMessage msg) {
+  Widget _buildInvoiceBubble(ChatMessage msg) {
     final data = msg.invoiceData;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(10),
@@ -100,18 +101,21 @@ class _ChatScreenState extends State<ChatScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Waiting for buyer confirmation',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                  l10n.waitingForBuyer,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 4),
-              const Text(
-                'Auto cancel in 48:00:35',
-                style: TextStyle(
+              Text(
+                l10n.autoCancelIn('48:00:35'),
+                style: const TextStyle(
                   fontSize: 10,
                   color: Colors.red,
                   fontWeight: FontWeight.w500,
@@ -129,16 +133,19 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Order Summary',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                Text(
+                  l10n.orderSummary,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 if (data != null) ...[
-                  _summaryRow('Price', '${data.price} MRU'),
-                  _summaryRow('Quantity', '${data.quantity} Kg'),
-                  _summaryRow('Transport', '${data.transportCost} MRU'),
-                  _summaryRow('Delivery', '${data.delivery} days'),
+                  _summaryRow(l10n.price, '${data.price} MRU'),
+                  _summaryRow(l10n.quantity, '${data.quantity} Kg'),
+                  _summaryRow(l10n.transport, '${data.transportCost} MRU'),
+                  _summaryRow(l10n.delivery, '${data.delivery} days'),
                 ],
               ],
             ),
@@ -152,9 +159,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   color: Colors.red,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text(
-                  'PDF',
-                  style: TextStyle(
+                child: Text(
+                  l10n.pdf,
+                  style: const TextStyle(
                     fontSize: 10,
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -163,14 +170,47 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  'Invoice.pdf',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    decoration: TextDecoration.underline,
+                child: GestureDetector(
+                  onTap: () async {
+                    // Try to get orderId from invoiceData first, then fallback to msg.id
+                    final String? orderIdStr = msg.invoiceData?.orderId;
+                    if (orderIdStr != null && orderIdStr.isNotEmpty) {
+                      final url = await _chatController.downloadInvoiceApi(
+                        orderIdStr,
+                      );
+                      if (url != null && url.isNotEmpty) {
+                        final uri = Uri.tryParse(url);
+                        if (uri != null) {
+                          try {
+                            // ignore: deprecated_member_use
+                            await launchUrl(
+                              uri,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          } catch (e) {
+                            debugPrint('Error launching invoice URL: $e');
+                          }
+                        }
+                      } else {
+                        Get.snackbar(
+                          l10n.error,
+                          l10n.couldNotDownloadInvoice,
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.red,
+                          colorText: Colors.white,
+                        );
+                      }
+                    }
+                  },
+                  child: Text(
+                    '${l10n.invoice}.pdf',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      decoration: TextDecoration.underline,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -199,11 +239,19 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _messageController.dispose();
+    _scrollController.dispose();
+    _scrollWorker?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (thread == null) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -233,45 +281,90 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
         ),
-        title: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                thread.avatarPath,
-                width: 32,
-                height: 32,
-                fit: BoxFit.cover,
+        title: Obx(() {
+          final String pId = thread!.productId;
+          final cached = ChatThread.productCache[pId];
+
+          final String currentTitle =
+              (cached?.name ?? '').isNotEmpty ? cached!.name : thread!.title;
+
+          final String cachedImage = cached?.image ?? '';
+          final String currentAvatar =
+              cachedImage.isNotEmpty ? cachedImage : thread!.avatarPath;
+
+          return Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child:
+                    currentAvatar.isNotEmpty && currentAvatar.startsWith('http')
+                        ? Image.network(
+                          currentAvatar,
+                          width: 32,
+                          height: 32,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (context, error, stackTrace) => Container(
+                                width: 32,
+                                height: 32,
+                                color: Colors.grey.shade100,
+                                child: const Icon(
+                                  Icons.inventory_2,
+                                  size: 18,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                        )
+                        : Container(
+                          width: 32,
+                          height: 32,
+                          color: Colors.grey.shade100,
+                          child: const Icon(
+                            Icons.inventory_2,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
+                        ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              thread.title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  currentTitle,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+        }),
       ),
       body: Column(
         children: [
           Expanded(
-            child: Obx(
-              () => ListView.builder(
+            child: Obx(() {
+              if (_chatController.isFetchingMessages.value &&
+                  _chatController.messages.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final displayMessages = _chatController.messages;
+              return ListView.builder(
+                controller: _scrollController,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
                 ),
-                itemCount: _messages.length,
+                itemCount: displayMessages.length,
                 itemBuilder: (context, index) {
-                  final msg = _messages[index];
-                  return _buildMessageBubble(msg);
+                  final msg = displayMessages[index];
+                  return _buildMessageBubbleNew(msg);
                 },
-              ),
-            ),
+              );
+            }),
           ),
           _buildBottomBar(),
         ],
@@ -279,7 +372,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildMessageBubble(_ChatMessage msg) {
+  Widget _buildMessageBubbleNew(ChatMessage msg) {
     final bubbleColor =
         msg.isMe ? const Color(0xFFD4E8D9) : const Color(0xFFE8EEF2);
 
@@ -291,46 +384,123 @@ class _ChatScreenState extends State<ChatScreen> {
     return Align(
       alignment: alignment,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          crossAxisAlignment: crossAlign,
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            if (msg.type == ChatMessageType.text)
-              Container(
-                constraints: const BoxConstraints(maxWidth: 260),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: bubbleColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  msg.text ?? '',
-                  style: const TextStyle(fontSize: 14),
-                ),
-              )
-            else if (msg.type == ChatMessageType.image)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  msg.imagePath!,
-                  width: 220,
-                  height: 130,
-                  fit: BoxFit.cover,
-                ),
-              )
-            else if (msg.type == ChatMessageType.invoice)
-              _buildInvoiceBubble(msg),
-            if (msg.timeLabel.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
-                child: Text(
-                  msg.timeLabel,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                ),
-              ),
+            if (!msg.isMe) ...[
+              Obx(() {
+                final String pId = thread!.productId;
+                final cachedImage = ChatThread.productCache[pId]?.image ?? '';
+                final String avatarUrl =
+                    cachedImage.isNotEmpty ? cachedImage : thread!.avatarPath;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8, bottom: 15),
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.shade300, width: 1),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child:
+                          avatarUrl.isNotEmpty && avatarUrl.startsWith('http')
+                              ? Image.network(
+                                avatarUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (c, e, s) => Container(
+                                      color: Colors.grey.shade100,
+                                      child: const Icon(
+                                        Icons.inventory_2,
+                                        size: 14,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                              )
+                              : Container(
+                                color: Colors.grey.shade100,
+                                child: const Icon(
+                                  Icons.inventory_2,
+                                  size: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+            Column(
+              crossAxisAlignment: crossAlign,
+              children: [
+                if (msg.type == 'text')
+                  // Check if this is an invoice PDF message
+                  (msg.text?.startsWith('INVOICE_PDF|') ?? false)
+                      ? _buildPdfBubble(msg)
+                      : Container(
+                        constraints: const BoxConstraints(maxWidth: 240),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: bubbleColor,
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(12),
+                            topRight: const Radius.circular(12),
+                            bottomLeft: Radius.circular(msg.isMe ? 12 : 0),
+                            bottomRight: Radius.circular(msg.isMe ? 0 : 12),
+                          ),
+                        ),
+                        child: Text(
+                          msg.text ?? '',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      )
+                else if (msg.type == 'image')
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child:
+                        msg.imagePath!.startsWith('http')
+                            ? Image.network(
+                              msg.imagePath!,
+                              width: 220,
+                              height: 130,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (context, error, stackTrace) =>
+                                      const Icon(Icons.error),
+                            )
+                            : Image.asset(
+                              msg.imagePath!,
+                              width: 220,
+                              height: 130,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (context, error, stackTrace) =>
+                                      const Icon(Icons.error),
+                            ),
+                  )
+                else if (msg.type == 'invoice')
+                  _buildInvoiceBubble(msg),
+                if (msg.timeLabel.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+                    child: Text(
+                      msg.timeLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
@@ -338,6 +508,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildBottomBar() {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: Column(
@@ -346,8 +517,8 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           const SizedBox(height: 8),
           Obx(() {
-            final hasInvoice = _messages.any(
-              (m) => m.type == ChatMessageType.invoice,
+            final hasInvoice = _chatController.messages.any(
+              (m) => m.type == 'invoice',
             );
             if (hasInvoice) {
               return Padding(
@@ -369,9 +540,9 @@ class _ChatScreenState extends State<ChatScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.cancel,
+                          style: const TextStyle(
                             color: Color(0xFF1B834F),
                             fontWeight: FontWeight.bold,
                           ),
@@ -393,9 +564,9 @@ class _ChatScreenState extends State<ChatScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          'Pay Now',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.payNow,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
@@ -406,6 +577,16 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               );
             }
+
+            // Only seller can see "Generate Invoice" when no invoice exists
+            final bool isSeller = _chatController.isSeller(
+              thread!.productSellerId,
+              productId: thread!.productId,
+            );
+            if (!isSeller) {
+              return const SizedBox.shrink();
+            }
+
             return GestureDetector(
               onTap: _showGenerateInvoiceForm,
               child: Container(
@@ -419,9 +600,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     topRight: Radius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Generate Invoice',
-                  style: TextStyle(
+                child: Text(
+                  l10n.generateInvoice,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -473,9 +654,9 @@ class _ChatScreenState extends State<ChatScreen> {
                         Expanded(
                           child: TextField(
                             controller: _messageController,
-                            decoration: const InputDecoration(
-                              hintText: 'Message....',
-                              hintStyle: TextStyle(
+                            decoration: InputDecoration(
+                              hintText: l10n.messageHint,
+                              hintStyle: const TextStyle(
                                 color: Colors.grey,
                                 fontSize: 14,
                               ),
@@ -514,26 +695,33 @@ class _ChatScreenState extends State<ChatScreen> {
                       PopupMenuItem(
                         value: 'gallery',
                         child: Row(
-                          children: const [
-                            Icon(Icons.image, color: Colors.black, size: 20),
-                            SizedBox(width: 12),
-                            Text('Gallery', style: TextStyle(fontSize: 14)),
+                          children: [
+                            const Icon(
+                              Icons.image,
+                              color: Colors.black,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              l10n.gallery,
+                              style: const TextStyle(fontSize: 14),
+                            ),
                           ],
                         ),
                       ),
                       PopupMenuItem(
                         value: 'location',
                         child: Row(
-                          children: const [
-                            Icon(
+                          children: [
+                            const Icon(
                               Icons.location_on,
                               color: Colors.black,
                               size: 20,
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Text(
-                              'Send Location',
-                              style: TextStyle(fontSize: 14),
+                              l10n.sendLocation,
+                              style: const TextStyle(fontSize: 14),
                             ),
                           ],
                         ),
@@ -564,22 +752,16 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    final time = TimeOfDay.now();
-    final label =
-        '${time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod}:${time.minute.toString().padLeft(2, '0')} ${time.period == DayPeriod.am ? 'AM' : 'PM'}';
-
-    _messages.add(
-      _ChatMessage(
-        text: text,
-        timeLabel: label,
-        isMe: true,
-        type: ChatMessageType.text,
-      ),
+    _chatController.sendMessageApi(
+      thread!.id,
+      text,
+      productId: thread!.productId,
     );
     _messageController.clear();
   }
 
   void _showPaymentRules() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -600,12 +782,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
                         child: Center(
                           child: Text(
-                            'Payment Rules',
-                            style: TextStyle(
+                            l10n.paymentRules,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
@@ -653,9 +835,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                         borderRadius: BorderRadius.circular(15),
                                       ),
                                     ),
-                                    child: const Text(
-                                      'Cancel',
-                                      style: TextStyle(
+                                    child: Text(
+                                      l10n.cancel,
+                                      style: const TextStyle(
                                         color: Color(0xFF1B834F),
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -672,32 +854,51 @@ class _ChatScreenState extends State<ChatScreen> {
                                           Navigator.pop(context);
                                         return;
                                       }
-                                      _pendingInvoice = null;
 
-                                      final path =
-                                          await InvoicePdfHelper.generateInvoice(
-                                            invoice,
+                                      final response = await _chatController
+                                          .generateInvoiceApi(
+                                            buyerId: thread!.otherUserId,
+                                            productId: thread!.productId,
+                                            price: invoice.price,
+                                            quantity: invoice.quantity,
+                                            transportCost:
+                                                invoice.transportCost,
+                                            deliveryDuration: invoice.delivery,
                                           );
-                                      log(path);
-                                      _messages.add(
-                                        _ChatMessage(
-                                          invoicePath: path,
-                                          invoiceData: invoice,
-                                          timeLabel: '',
-                                          isMe: true,
-                                          type: ChatMessageType.invoice,
-                                        ),
-                                      );
-                                      final chatController =
-                                          Get.find<ChatController>();
-                                      chatController.addInvoiceRecord(
-                                        thread: thread,
-                                        data: invoice,
-                                        pdfPath: path,
-                                        isSold: true,
-                                      );
-                                      if (context.mounted) {
-                                        Navigator.pop(context);
+
+                                      if (response != null &&
+                                          response['status'] == true) {
+                                        // Get the newly generated invoice ID (order_id)
+                                        final orderId = response['data']?['id'];
+
+                                        if (orderId != null) {
+                                          // Send invoice message with special format
+                                          // Format: INVOICE_PDF|order_id|filename
+                                          // This allows the UI to recognize and display it as a PDF
+                                          await _chatController.sendMessageApi(
+                                            thread!.id,
+                                            'INVOICE_PDF|$orderId|Invoice.pdf',
+                                            type: 'text',
+                                            productId: thread!.productId,
+                                          );
+                                        }
+
+                                        if (context.mounted) {
+                                          Navigator.pop(context);
+                                        }
+                                        _pendingInvoice =
+                                            null; // Clear after success
+                                        _chatController.fetchMessages(
+                                          thread!.id,
+                                        );
+                                      } else {
+                                        Get.snackbar(
+                                          l10n.error,
+                                          l10n.failedToGenerateInvoice,
+                                          snackPosition: SnackPosition.BOTTOM,
+                                          backgroundColor: Colors.red,
+                                          colorText: Colors.white,
+                                        );
                                       }
                                     },
                                     style: ElevatedButton.styleFrom(
@@ -708,9 +909,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                         borderRadius: BorderRadius.circular(15),
                                       ),
                                     ),
-                                    child: const Text(
-                                      'Generate Invoice',
-                                      style: TextStyle(
+                                    child: Text(
+                                      l10n.generateInvoice,
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -765,6 +966,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _showGenerateInvoiceForm() {
+    final l10n = AppLocalizations.of(context)!;
     final priceController = TextEditingController();
     final quantityController = TextEditingController();
     final transportController = TextEditingController();
@@ -790,12 +992,12 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
                         child: Center(
                           child: Text(
-                            'Generate Invoice',
-                            style: TextStyle(
+                            l10n.generateInvoice,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
@@ -818,9 +1020,9 @@ class _ChatScreenState extends State<ChatScreen> {
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Enter Price',
-                                  style: TextStyle(
+                                Text(
+                                  l10n.enterPrice,
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.black87,
@@ -829,9 +1031,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                 const SizedBox(height: 8),
                                 _buildFilledField(priceController),
                                 const SizedBox(height: 16),
-                                const Text(
-                                  'Enter Quantity',
-                                  style: TextStyle(
+                                Text(
+                                  l10n.enterQuantity,
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.black87,
@@ -840,9 +1042,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                 const SizedBox(height: 8),
                                 _buildFilledField(quantityController),
                                 const SizedBox(height: 16),
-                                const Text(
-                                  'Enter Transport Cost',
-                                  style: TextStyle(
+                                Text(
+                                  l10n.enterTransportCost,
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.black87,
@@ -851,9 +1053,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                 const SizedBox(height: 8),
                                 _buildFilledField(transportController),
                                 const SizedBox(height: 16),
-                                const Text(
-                                  'Select Expected Delivery',
-                                  style: TextStyle(
+                                Text(
+                                  l10n.selectExpectedDelivery,
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.black87,
@@ -873,10 +1075,10 @@ class _ChatScreenState extends State<ChatScreen> {
                                       color: const Color(0xFFD4E8D9),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Text(
-                                      'Days',
+                                    child: Text(
+                                      l10n.days,
                                       textAlign: TextAlign.center,
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         color: Colors.black87,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w500,
@@ -903,9 +1105,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                             ),
                                           ),
                                         ),
-                                        child: const Text(
-                                          'Cancel',
-                                          style: TextStyle(
+                                        child: Text(
+                                          l10n.cancel,
+                                          style: const TextStyle(
                                             color: Color(0xFF1B834F),
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -916,6 +1118,118 @@ class _ChatScreenState extends State<ChatScreen> {
                                     Expanded(
                                       child: ElevatedButton(
                                         onPressed: () {
+                                          if (priceController.text
+                                              .trim()
+                                              .isEmpty) {
+                                            Get.snackbar(
+                                              l10n.required,
+                                              l10n.pleaseEnterPrice,
+                                              snackPosition:
+                                                  SnackPosition.BOTTOM,
+                                              backgroundColor: Colors.redAccent,
+                                              colorText: Colors.white,
+                                            );
+                                            return;
+                                          }
+                                          if (double.tryParse(
+                                                priceController.text.trim(),
+                                              ) ==
+                                              null) {
+                                            Get.snackbar(
+                                              l10n.invalidInput,
+                                              l10n.validNumericPrice,
+                                              snackPosition:
+                                                  SnackPosition.BOTTOM,
+                                              backgroundColor: Colors.redAccent,
+                                              colorText: Colors.white,
+                                            );
+                                            return;
+                                          }
+
+                                          if (quantityController.text
+                                              .trim()
+                                              .isEmpty) {
+                                            Get.snackbar(
+                                              l10n.required,
+                                              l10n.pleaseEnterQuantity,
+                                              snackPosition:
+                                                  SnackPosition.BOTTOM,
+                                              backgroundColor: Colors.redAccent,
+                                              colorText: Colors.white,
+                                            );
+                                            return;
+                                          }
+                                          if (double.tryParse(
+                                                quantityController.text.trim(),
+                                              ) ==
+                                              null) {
+                                            Get.snackbar(
+                                              l10n.invalidInput,
+                                              l10n.validNumericQuantity,
+                                              snackPosition:
+                                                  SnackPosition.BOTTOM,
+                                              backgroundColor: Colors.redAccent,
+                                              colorText: Colors.white,
+                                            );
+                                            return;
+                                          }
+
+                                          if (transportController.text
+                                              .trim()
+                                              .isEmpty) {
+                                            Get.snackbar(
+                                              l10n.required,
+                                              l10n.pleaseEnterTransportCost,
+                                              snackPosition:
+                                                  SnackPosition.BOTTOM,
+                                              backgroundColor: Colors.redAccent,
+                                              colorText: Colors.white,
+                                            );
+                                            return;
+                                          }
+                                          if (double.tryParse(
+                                                transportController.text.trim(),
+                                              ) ==
+                                              null) {
+                                            Get.snackbar(
+                                              l10n.invalidInput,
+                                              l10n.validNumericTransport,
+                                              snackPosition:
+                                                  SnackPosition.BOTTOM,
+                                              backgroundColor: Colors.redAccent,
+                                              colorText: Colors.white,
+                                            );
+                                            return;
+                                          }
+
+                                          if (deliveryController.text
+                                              .trim()
+                                              .isEmpty) {
+                                            Get.snackbar(
+                                              l10n.required,
+                                              l10n.pleaseEnterDeliveryDuration,
+                                              snackPosition:
+                                                  SnackPosition.BOTTOM,
+                                              backgroundColor: Colors.redAccent,
+                                              colorText: Colors.white,
+                                            );
+                                            return;
+                                          }
+                                          if (int.tryParse(
+                                                deliveryController.text.trim(),
+                                              ) ==
+                                              null) {
+                                            Get.snackbar(
+                                              l10n.invalidInput,
+                                              l10n.validNumericDays,
+                                              snackPosition:
+                                                  SnackPosition.BOTTOM,
+                                              backgroundColor: Colors.redAccent,
+                                              colorText: Colors.white,
+                                            );
+                                            return;
+                                          }
+
                                           _pendingInvoice = InvoiceData(
                                             price: priceController.text.trim(),
                                             quantity:
@@ -942,9 +1256,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                             ),
                                           ),
                                         ),
-                                        child: const Text(
-                                          'Proceed',
-                                          style: TextStyle(
+                                        child: Text(
+                                          l10n.proceed,
+                                          style: const TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -1005,26 +1319,56 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
-}
 
-enum ChatMessageType { text, image, invoice }
+  Widget _buildPdfBubble(ChatMessage msg) {
+    // Parse the invoice format: INVOICE_PDF|order_id|filename
+    final parts = msg.text?.split('|') ?? [];
+    final orderId = parts.length > 1 ? parts[1] : '';
+    final filename = parts.length > 2 ? parts[2] : 'Invoice.pdf';
 
-class _ChatMessage {
-  final String? text;
-  final String? imagePath;
-  final String? invoicePath;
-  final InvoiceData? invoiceData;
-  final String timeLabel;
-  final bool isMe;
-  final ChatMessageType type;
-
-  _ChatMessage({
-    this.text,
-    this.imagePath,
-    this.invoicePath,
-    this.invoiceData,
-    required this.timeLabel,
-    required this.isMe,
-    required this.type,
-  });
+    return GestureDetector(
+      onTap: () async {
+        if (orderId.isNotEmpty) {
+          // Construct the download URL
+          final url =
+              'https://ourworks.co.in/agro-connect/public/api/customer/download-invoice?order_id=$orderId';
+          final uri = Uri.tryParse(url);
+          if (uri != null) {
+            try {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            } catch (e) {
+              debugPrint('Error launching invoice URL: $e');
+            }
+          }
+        }
+      },
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 200),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.picture_as_pdf, color: Colors.red, size: 32),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                filename,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

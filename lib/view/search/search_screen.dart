@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 
 import '../../controllers/product_controller.dart';
 import '../../models/product.dart';
@@ -41,6 +42,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildFilterSheetV2() {
+    final l10n = AppLocalizations.of(context)!;
     final priceRange = _productController.priceRange;
 
     return Column(
@@ -79,10 +81,10 @@ class _SearchScreenState extends State<SearchScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Header
-              const Center(
+              Center(
                 child: Text(
-                  'Filters & Sorting',
-                  style: TextStyle(
+                  l10n.filtersSorting,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
@@ -94,11 +96,14 @@ class _SearchScreenState extends State<SearchScreen> {
               const SizedBox(height: 24),
 
               // Quantity Range
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  'Quantity Range',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  l10n.quantityRange,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -107,7 +112,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    _quantityChip('Any quantity', 0),
+                    _quantityChip(l10n.anyQuantity, 0),
                     const SizedBox(width: 8),
                     _quantityChip('50-100 kg', 1),
                     const SizedBox(width: 8),
@@ -122,11 +127,14 @@ class _SearchScreenState extends State<SearchScreen> {
 
               const SizedBox(height: 24),
               // Price Range
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  'Price Range',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  l10n.priceRangeLabel,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -161,9 +169,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _buildPriceBox('${range.start.toInt()} MRU'),
-                          const Text(
-                            'To',
-                            style: TextStyle(
+                          Text(
+                            l10n.to,
+                            style: const TextStyle(
                               color: Colors.grey,
                               fontWeight: FontWeight.w500,
                             ),
@@ -179,10 +187,13 @@ class _SearchScreenState extends State<SearchScreen> {
               const SizedBox(height: 13),
               const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
               const SizedBox(height: 13),
-              const Center(
+              Center(
                 child: Text(
-                  'Sort By',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  l10n.sortBy,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: 13),
@@ -194,11 +205,11 @@ class _SearchScreenState extends State<SearchScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    _sortChip('Relevance', 0),
+                    _sortChip(l10n.relevance, 0),
                     const SizedBox(width: 8),
-                    _sortChip('Recently posted', 1),
+                    _sortChip(l10n.recentlyPosted, 1),
                     const SizedBox(width: 8),
-                    _sortChip('Newest First', 2),
+                    _sortChip(l10n.newestFirst, 2),
                   ],
                 ),
               ),
@@ -225,9 +236,9 @@ class _SearchScreenState extends State<SearchScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          'Clear All',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.clearAll,
+                          style: const TextStyle(
                             color: Color(0xFF1B834F),
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -249,9 +260,9 @@ class _SearchScreenState extends State<SearchScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
-                          'Apply',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.apply,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -378,8 +389,9 @@ class _SearchScreenState extends State<SearchScreen> {
                     Expanded(
                       child: TextField(
                         controller: _searchController,
-                        decoration: const InputDecoration(
-                          hintText: 'Search Products',
+                        decoration: InputDecoration(
+                          hintText:
+                              AppLocalizations.of(context)!.searchProductsHint,
                           hintStyle: TextStyle(
                             color: Colors.grey,
                             fontSize: 14,
@@ -445,18 +457,44 @@ class _SearchScreenState extends State<SearchScreen> {
 
           final List<Product> products = _productController.filteredProducts;
 
-          return GridView.builder(
-            itemCount: products.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.72,
-            ),
-            itemBuilder: (context, index) {
-              final product = products[index];
-              return ProductCard(product: product);
+          return NotificationListener<ScrollNotification>(
+            onNotification: (ScrollNotification scrollInfo) {
+              if (scrollInfo.metrics.pixels >=
+                  scrollInfo.metrics.maxScrollExtent * 0.8) {
+                if (_productController.hasMore.value &&
+                    !_productController.isLoadingMore.value) {
+                  _productController.fetchAllProductsApi(loadMore: true);
+                }
+              }
+              return false;
             },
+            child: GridView.builder(
+              itemCount:
+                  products.length +
+                  (_productController.isLoadingMore.value ? 1 : 0),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.72,
+              ),
+              itemBuilder: (context, index) {
+                if (index == products.length) {
+                  return const Center(
+                    child: SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF1B834F),
+                      ),
+                    ),
+                  );
+                }
+                final product = products[index];
+                return ProductCard(product: product);
+              },
+            ),
           );
         }),
       ),

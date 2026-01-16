@@ -54,6 +54,15 @@ class _LoginOtpVerificationScreenState
 
   void _onContinue() {
     final otp = _otpControllers.map((e) => e.text).join();
+    if (otp.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.pleaseEnterCompleteOtp),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
     if (otp.length == 6) {
       final l10n = AppLocalizations.of(context)!;
       // Complete login - Navigate to home/dashboard

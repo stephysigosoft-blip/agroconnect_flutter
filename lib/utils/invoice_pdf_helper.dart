@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -10,12 +11,14 @@ class InvoiceData {
   final String quantity;
   final String transportCost;
   final String delivery;
+  final String? orderId;
 
   InvoiceData({
     required this.price,
     required this.quantity,
     required this.transportCost,
     required this.delivery,
+    this.orderId,
   });
 }
 
@@ -62,7 +65,6 @@ class InvoicePdfHelper {
 
 class InvoiceRecord {
   final String id;
-  final String productName;
   final String productImagePath;
   final String unitPrice;
   final String quantity;
@@ -81,9 +83,12 @@ class InvoiceRecord {
   final String? paymentFromAdminDate;
   final String? paymentReleaseDate;
 
+  // Localized field
+  final Map<String, String> _productNameMap;
+
   InvoiceRecord({
     required this.id,
-    required this.productName,
+    required String productName,
     required this.productImagePath,
     required this.unitPrice,
     required this.quantity,
@@ -100,5 +105,16 @@ class InvoiceRecord {
     this.dispatchedDate,
     this.paymentFromAdminDate,
     this.paymentReleaseDate,
-  });
+    Map<String, String>? productNameMap,
+  }) : _productNameMap = productNameMap ?? {'en': productName};
+
+  String get productName {
+    final lang = Get.locale?.languageCode ?? 'en';
+    return _productNameMap[lang] ??
+        _productNameMap['en'] ??
+        _productNameMap.values.firstWhere(
+          (v) => v.isNotEmpty,
+          orElse: () => 'Product',
+        );
+  }
 }

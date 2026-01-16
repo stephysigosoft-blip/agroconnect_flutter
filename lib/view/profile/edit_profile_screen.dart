@@ -1,9 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart' as dio;
+import '../../utils/api_constants.dart';
+import '../../services/api_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -16,6 +21,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   String _userCountryCode = '+222';
+  String _currentImageUrl = '';
+  bool _isImageRemoved = false;
 
   @override
   void initState() {
@@ -30,41 +37,226 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _userCountryCode = prefs.getString('user_country_code') ?? '+222';
       String phone = prefs.getString('user_phone') ?? '45 12 34 56';
       _phoneController.text = phone;
+      _currentImageUrl = prefs.getString('user_image') ?? '';
     });
   }
 
   File? _image;
   final ImagePicker _picker = ImagePicker();
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImage(ImageSource source) async {
     final XFile? pickedFile = await _picker.pickImage(
-      source: ImageSource.gallery,
+      source: source,
+      imageQuality: 70,
     );
 
     if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path);
-      });
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: pickedFile.path,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Adjust Image',
+            toolbarColor: const Color(0xFF1B834F),
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: false,
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio3x2,
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.ratio4x3,
+              CropAspectRatioPreset.ratio16x9,
+            ],
+          ),
+          IOSUiSettings(
+            title: 'Adjust Image',
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.ratio3x2,
+              CropAspectRatioPreset.original,
+              CropAspectRatioPreset.ratio4x3,
+              CropAspectRatioPreset.ratio16x9,
+            ],
+          ),
+        ],
+      );
+
+      if (croppedFile != null) {
+        setState(() {
+          _image = File(croppedFile.path);
+          _isImageRemoved = false;
+        });
+      }
     }
   }
 
-  Future<void> _updateProfile() async {
-    // Save to SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_name', _nameController.text.trim());
-    await prefs.setString('user_phone', _phoneController.text.trim());
-    await prefs.setString('user_country_code', _userCountryCode);
-
-    Get.back();
-    Get.snackbar(
-      'Success',
-      'Profile Updated Successfully',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-      margin: const EdgeInsets.all(10),
-      borderRadius: 10,
+  void _showImageOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Color(0xFF1B834F)),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.photo_library,
+                  color: Color(0xFF1B834F),
+                ),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              if (_image != null || _currentImageUrl.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text(
+                    'Remove Photo',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _image = null;
+                      _currentImageUrl = '';
+                      _isImageRemoved = true;
+                    });
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: const Text('Cancel'),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  Future<void> _updateProfile() async {
+    if (_nameController.text.trim().isEmpty) {
+      Get.snackbar(
+        'Required',
+        'Please enter your name',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return;
+    }
+    if (_phoneController.text.trim().isEmpty) {
+      Get.snackbar(
+        'Required',
+        'Please enter your phone number',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return;
+    }
+    if (_phoneController.text.trim().length < 6 ||
+        !RegExp(r'^[0-9]+$').hasMatch(_phoneController.text.trim())) {
+      Get.snackbar(
+        'Invalid Input',
+        'Please enter a valid numeric phone number',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      final apiService = Get.find<ApiService>();
+
+      dio.MultipartFile? imageFile;
+      if (_image != null) {
+        imageFile = await dio.MultipartFile.fromFile(_image!.path);
+      }
+
+      final formData = dio.FormData.fromMap({
+        'name': _nameController.text.trim(),
+        'country_code': _userCountryCode,
+        'mobile': _phoneController.text.trim(),
+        if (imageFile != null) 'image': imageFile,
+        if (_isImageRemoved) 'image': '', // Signal removal to server
+      });
+
+      final response = await apiService.updateProfile(formData);
+
+      if (response != null && response['status'] == true) {
+        // Save to SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_name', _nameController.text.trim());
+        await prefs.setString('user_phone', _phoneController.text.trim());
+        await prefs.setString('user_country_code', _userCountryCode);
+
+        if (_isImageRemoved) {
+          await prefs.setString('user_image', '');
+        } else if (response['data'] != null &&
+            response['data']['user'] != null &&
+            response['data']['user']['image'] != null) {
+          String img = response['data']['user']['image'];
+          if (!img.startsWith('http')) {
+            img = '${ApiConstants.imageBaseUrl}$img';
+          }
+          await prefs.setString('user_image', img);
+        }
+
+        Get.back();
+        Get.snackbar(
+          'Success',
+          'Profile Updated Successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(10),
+          borderRadius: 10,
+        );
+      } else {
+        String errorMsg = 'Failed to update profile';
+        if (response != null && response['message'] != null) {
+          if (response['message'] is Map) {
+            final firstError = (response['message'] as Map).values.first;
+            if (firstError is List) errorMsg = firstError.first;
+          }
+        }
+        Get.snackbar(
+          'Error',
+          errorMsg,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(10),
+          borderRadius: 10,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'An unexpected error occurred',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(10),
+        borderRadius: 10,
+      );
+    }
   }
 
   @override
@@ -186,19 +378,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     height: 100,
                                     fit: BoxFit.cover,
                                   )
-                                  : Center(
-                                    child: Text(
-                                      _nameController.text.isNotEmpty
-                                          ? _nameController.text[0]
-                                              .toUpperCase()
-                                          : 'S',
-                                      style: const TextStyle(
-                                        fontSize: 40,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ),
+                                  : _currentImageUrl.isNotEmpty
+                                  ? Image.network(
+                                    _currentImageUrl,
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            _buildLetterAvatar(),
+                                  )
+                                  : _buildLetterAvatar(),
                         ),
                       ),
                     ),
@@ -207,7 +397,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     bottom: 0,
                     right: 0,
                     child: GestureDetector(
-                      onTap: _pickImage,
+                      onTap: _showImageOptions,
                       child: Container(
                         width: 32,
                         height: 32,
@@ -235,6 +425,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLetterAvatar() {
+    return Center(
+      child: Text(
+        _nameController.text.isNotEmpty
+            ? _nameController.text[0].toUpperCase()
+            : 'S',
+        style: const TextStyle(
+          fontSize: 40,
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),
       ),
     );
   }
@@ -342,6 +547,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     fontWeight: FontWeight.w600,
                     color: Colors.black,
                   ),
+                  keyboardType:
+                      isPhone ? TextInputType.phone : TextInputType.text,
+                  inputFormatters:
+                      isPhone ? [FilteringTextInputFormatter.digitsOnly] : [],
                   decoration: const InputDecoration(
                     border: InputBorder.none,
                     isDense: true,

@@ -1,6 +1,12 @@
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../controllers/settings_controller.dart';
+
+import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/common_back_button.dart';
+import '../../utils/app_colors.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,64 +16,47 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _notificationsEnabled = true;
+  late final SettingsController _controller;
 
   @override
+  void initState() {
+    super.initState();
+    _controller = Get.put(SettingsController());
+  }
+
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: GestureDetector(
-            onTap: () => Get.back(),
-            child: Container(
-              width: 35,
-              height: 35,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1B834F),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.chevron_left,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-          ),
-        ),
-        title: const Text(
-          'Settings',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
+      appBar: CommonAppBar(
+        title: l10n.settings,
+        leading: const Padding(
+          padding: EdgeInsets.all(8.0),
+          child: CommonBackButton(),
         ),
       ),
       body: Column(
         children: [
           const SizedBox(height: 20),
           _buildMenuItem(
-            title: 'Edit Profile',
+            title: l10n.editProfile,
             onTap: () => Get.toNamed('/editProfile'),
           ),
           _buildDivider(),
-          _buildToggleItem(
-            title: 'Notification',
-            value: _notificationsEnabled,
-            onChanged: (value) {
-              setState(() {
-                _notificationsEnabled = value;
-              });
-            },
-          ),
+          Obx(() {
+            final notificationEnabled =
+                _controller.settings.value?.notificationEnabled ?? true;
+            return _buildToggleItem(
+              title: l10n.notification,
+              value: notificationEnabled,
+              onChanged: (value) {
+                _controller.toggleNotifications(value);
+              },
+            );
+          }),
           _buildDivider(),
           _buildMenuItem(
-            title: 'Delete Account',
+            title: l10n.deleteAccount,
             textColor: Colors.red,
             onTap: _showDeleteAccountDialog,
           ),
@@ -125,8 +114,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: const Color(0xFF1B834F),
-            activeTrackColor: const Color(0xFF1B834F).withOpacity(0.2),
+            activeColor: AppColors.primary,
+            activeTrackColor: AppColors.primary.withOpacity(0.2),
           ),
         ],
       ),
@@ -138,6 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showDeleteAccountDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -180,9 +170,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
 
                   // Title
-                  const Text(
-                    'Delete Account',
-                    style: TextStyle(
+                  Text(
+                    l10n.deleteAccount,
+                    style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
@@ -191,10 +181,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 10),
 
                   // Message
-                  const Text(
-                    'Are you sure you want to delete\nyour account?',
+                  Text(
+                    l10n.deleteAccountConfirmation,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: Colors.black54),
+                    style: const TextStyle(fontSize: 16, color: Colors.black54),
                   ),
                   const SizedBox(height: 24),
 
@@ -212,15 +202,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       context,
                                     ).pop(), // Reliable close
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFF1B834F)),
+                              side: const BorderSide(color: AppColors.primary),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                color: Color(0xFF1B834F),
+                            child: Text(
+                              l10n.cancel,
+                              style: const TextStyle(
+                                color: AppColors.primary,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -237,24 +227,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: ElevatedButton(
                             onPressed: () async {
                               Navigator.of(context).pop(); // Close sheet first
-                              // TODO: Implement actual delete logic
-                              final prefs =
-                                  await SharedPreferences.getInstance();
-                              await prefs.clear();
-                              Get.offAllNamed(
-                                '/languageSelection',
-                              ); // Redirect to onboarding
+
+                              final success = await _controller.deleteAccount();
+
+                              if (success) {
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                await prefs.clear();
+                                Get.offAllNamed('/languageSelection');
+                              }
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1B834F),
+                              backgroundColor: AppColors.primary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               elevation: 0,
                             ),
-                            child: const Text(
-                              'Delete',
-                              style: TextStyle(
+                            child: Text(
+                              l10n.delete,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,

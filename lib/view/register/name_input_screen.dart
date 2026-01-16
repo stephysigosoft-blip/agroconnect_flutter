@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart' as dio;
 import '../../services/api_service.dart';
 
 class RegisterNameInputScreen extends StatefulWidget {
@@ -29,29 +30,75 @@ class _RegisterNameInputScreenState extends State<RegisterNameInputScreen> {
   }
 
   void _onDone() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (_nameController.text.trim().isEmpty) {
+      Get.snackbar(
+        l10n.required,
+        l10n.pleaseEnterName,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     if (_nameController.text.trim().isNotEmpty) {
-      final l10n = AppLocalizations.of(context)!;
       final name = _nameController.text.trim();
 
-      // Save user details to SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_name', name);
-      await prefs.setString('user_phone', widget.phoneNumber);
-      await prefs.setString('user_country_code', widget.countryCode);
-
-      // Call Home API to verify token/session
+      // Call API to update profile with the name
       final apiService = Get.find<ApiService>();
-      await apiService.getHome();
 
-      if (!mounted) return;
+      try {
+        // Create FormData to send name to backend
+        final formData = dio.FormData.fromMap({
+          'name': name,
+          'country_code': widget.countryCode,
+          'mobile': widget.phoneNumber,
+        });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.registrationSuccessful(name)),
-          backgroundColor: const Color(0xFF1B834F),
-        ),
-      );
-      Navigator.pushReplacementNamed(context, '/home');
+        final response = await apiService.updateProfile(formData);
+
+        if (response != null && response['status'] == true) {
+          // Save user details to SharedPreferences after successful API call
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_name', name);
+          await prefs.setString('user_phone', widget.phoneNumber);
+          await prefs.setString('user_country_code', widget.countryCode);
+
+          // Call Home API to verify token/session
+          await apiService.getHome();
+
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.registrationSuccessful(name)),
+              backgroundColor: const Color(0xFF1B834F),
+            ),
+          );
+          Get.offAllNamed('/home');
+        } else {
+          // API call failed
+          if (!mounted) return;
+          Get.snackbar(
+            l10n.error,
+            l10n.failedToSaveProfile,
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.redAccent,
+            colorText: Colors.white,
+          );
+        }
+      } catch (e) {
+        // Handle error
+        if (!mounted) return;
+        Get.snackbar(
+          l10n.error,
+          l10n.errorOccurred,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+        );
+      }
     }
   }
 

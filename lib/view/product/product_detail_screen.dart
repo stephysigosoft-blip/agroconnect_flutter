@@ -1,3 +1,4 @@
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -11,15 +12,20 @@ class ProductDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final args = Get.arguments;
     late final Product product;
+    bool showCancel = false;
 
-    if (args is Product) {
+    if (args is Map) {
+      product = args['product'] as Product;
+      showCancel = args['showCancel'] == true;
+    } else if (args is Product) {
       product = args;
     } else if (args is ChatThread) {
       // Fallback mapping from chat thread to minimal product
       product = Product(
-        id: args.id,
+        id: args.productId,
         name: args.title,
         category: '',
         pricePerKg: 0,
@@ -30,7 +36,7 @@ class ProductDetailScreen extends StatelessWidget {
       );
     } else {
       // Safe default to avoid crash
-      product = const Product(
+      product = Product(
         id: 'unknown',
         name: 'Unknown',
         category: '',
@@ -44,10 +50,10 @@ class ProductDetailScreen extends StatelessWidget {
     final ProductController controller = Get.find<ProductController>();
     final WishlistController wishlistController = Get.put(WishlistController());
 
-    final related =
-        controller.allProducts
-            .where((p) => p.id != product.id && p.category == product.category)
-            .toList();
+    // Trigger fetch details
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.fetchProductDetails(product.id);
+    });
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -55,9 +61,16 @@ class ProductDetailScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        automaticallyImplyLeading: false,
         leading: Center(
           child: InkWell(
-            onTap: () => Get.back(),
+            onTap: () {
+              if (showCancel) {
+                Get.offAllNamed('/home');
+              } else {
+                Get.back();
+              }
+            },
             borderRadius: BorderRadius.circular(12),
             child: Container(
               width: 35,
@@ -74,9 +87,9 @@ class ProductDetailScreen extends StatelessWidget {
             ),
           ),
         ),
-        title: const Text(
-          'Details',
-          style: TextStyle(
+        title: Text(
+          l10n.details,
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -110,66 +123,139 @@ class ProductDetailScreen extends StatelessWidget {
           }),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 10),
-            _buildImageCarousel(product),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildMainInfo(product),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildMakeDealButton(product),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildDescription(),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildPostedBy(),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF9F9F9),
-                borderRadius: BorderRadius.circular(8),
+      body: Obx(() {
+        if (controller.isFetchingDetails.value &&
+            controller.currentProductDetails.value == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final p = controller.currentProductDetails.value ?? product;
+
+        final related =
+            controller.allProducts
+                .where((item) => item.id != p.id && item.category == p.category)
+                .toList();
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
+              _buildImageCarousel(p),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildMainInfo(context, p),
               ),
-              child: _buildAdMeta(),
-            ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: const Text(
-                'Related Ads',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              const SizedBox(height: 16),
+              if (showCancel)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Get.offAllNamed('/home'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(48),
+                            side: const BorderSide(color: Color(0xFF1B834F)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                          ),
+                          child: const Text(
+                            'Back',
+                            style: TextStyle(
+                              color: Color(0xFF1B834F),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Get.offAllNamed('/home'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1B834F),
+                            minimumSize: const Size.fromHeight(48),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            l10n.cancel,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _buildMakeDealButton(p, l10n),
+                ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildDescription(p, l10n),
               ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildRelatedAds(
-                related.isEmpty ? controller.allProducts : related,
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildPostedBy(p, l10n),
               ),
-            ),
-          ],
-        ),
-      ),
+              const SizedBox(height: 24),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9F9F9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: _buildAdMeta(context, controller, p),
+              ),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  l10n.relatedAds,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildRelatedAds(
+                  context,
+                  related.isEmpty ? controller.allProducts : related,
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
     );
   }
 
   Widget _buildImageCarousel(Product product) {
-    final images = [product.imagePath, product.imagePath, product.imagePath];
+    final images =
+        product.images.isNotEmpty ? product.images : [product.imagePath];
 
     final pageController = PageController();
     final currentPage = 0.obs;
@@ -183,15 +269,30 @@ class ProductDetailScreen extends StatelessWidget {
             itemCount: images.length,
             onPageChanged: (index) => currentPage.value = index,
             itemBuilder: (context, index) {
+              final img = images[index];
+              final isNetwork = img.startsWith('http');
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: Image.asset(
-                    images[index],
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                  ),
+                  child:
+                      isNetwork
+                          ? Image.network(
+                            img,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder:
+                                (context, error, stackTrace) =>
+                                    _buildErrorPlaceholder(),
+                          )
+                          : Image.asset(
+                            img,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder:
+                                (context, error, stackTrace) =>
+                                    _buildErrorPlaceholder(),
+                          ),
                 ),
               );
             },
@@ -286,7 +387,7 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMainInfo(Product product) {
+  Widget _buildMainInfo(BuildContext context, Product product) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -296,16 +397,20 @@ class ProductDetailScreen extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          '${product.pricePerKg.toStringAsFixed(0)} MRU / Kg',
+          AppLocalizations.of(
+            context,
+          )!.pricePerKg(product.pricePerKg.toStringAsFixed(0)),
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFF1B834F),
+            color: Color(0xFF1B834F),
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          '${product.availableQuantityKg.toStringAsFixed(0)} Kg Available',
+          AppLocalizations.of(
+            context,
+          )!.available(product.availableQuantityKg.toStringAsFixed(0)),
           style: const TextStyle(fontSize: 14, color: Colors.black87),
         ),
         const SizedBox(height: 8),
@@ -323,19 +428,19 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMakeDealButton(Product product) {
+  Widget _buildMakeDealButton(Product product, AppLocalizations l10n) {
     return OutlinedButton.icon(
-      onPressed: () => _showMakeOfferDialog(product),
+      onPressed: () => _showMakeOfferDialog(product, l10n),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(48),
         side: const BorderSide(color: Color(0xFF1B834F)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
       icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF1B834F)),
-      label: const Text(
-        'Make a Deal',
-        style: TextStyle(
-          color: const Color(0xFF1B834F),
+      label: Text(
+        l10n.makeADeal,
+        style: const TextStyle(
+          color: Color(0xFF1B834F),
           fontSize: 16,
           fontWeight: FontWeight.w600,
         ),
@@ -343,7 +448,7 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showMakeOfferDialog(Product product) {
+  void _showMakeOfferDialog(Product product, AppLocalizations l10n) {
     final quantityController = TextEditingController();
     final noteController = TextEditingController();
 
@@ -357,16 +462,22 @@ class ProductDetailScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Center(
+              Center(
                 child: Text(
-                  'Make an Offer',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  l10n.makeAnOffer,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Quantity (Kg)',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              Text(
+                l10n.quantityKg,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -394,9 +505,12 @@ class ProductDetailScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Your Offer Price (MRU)',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              Text(
+                l10n.yourOfferPrice,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -438,9 +552,9 @@ class ProductDetailScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(15),
                         ),
                       ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
+                      child: Text(
+                        l10n.cancel,
+                        style: const TextStyle(
                           color: Color(0xFF1B834F), // Green Text
                           fontWeight: FontWeight.w600,
                           fontSize: 16,
@@ -453,9 +567,41 @@ class ProductDetailScreen extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () {
                         final qty = quantityController.text.trim();
+                        final price = noteController.text.trim();
+
                         if (qty.isEmpty) {
+                          Get.snackbar(
+                            l10n.required,
+                            l10n.pleaseEnterQuantity,
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.redAccent,
+                            colorText: Colors.white,
+                          );
                           return;
                         }
+                        if (double.tryParse(qty) == null) {
+                          Get.snackbar(
+                            l10n.invalidInput,
+                            l10n.validNumericQuantity,
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.redAccent,
+                            colorText: Colors.white,
+                          );
+                          return;
+                        }
+
+                        if (price.isNotEmpty &&
+                            double.tryParse(price) == null) {
+                          Get.snackbar(
+                            l10n.invalidInput,
+                            l10n.validNumericPrice,
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.redAccent,
+                            colorText: Colors.white,
+                          );
+                          return;
+                        }
+
                         final chatController = Get.put(ChatController());
                         chatController.sendOffer(
                           product: product,
@@ -472,9 +618,9 @@ class ProductDetailScreen extends StatelessWidget {
                         ),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'Send Offer',
-                        style: TextStyle(
+                      child: Text(
+                        l10n.sendOffer,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
                           fontSize: 16,
@@ -492,23 +638,40 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDescription() {
-    return const Text(
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus rutrum ornare odio vel commodo. Quisque interdum dui at neque eleifend, ut laoreet sapien tempus. Etiam dui enim, ullamcorper id leo at, aliquam condimentum tortor.',
-      style: TextStyle(fontSize: 13, color: Colors.black, height: 1.4),
+  Widget _buildDescription(Product product, AppLocalizations l10n) {
+    return Text(
+      product.description.isNotEmpty ? product.description : l10n.noDescription,
+      style: const TextStyle(fontSize: 13, color: Colors.black, height: 1.4),
     );
   }
 
-  Widget _buildPostedBy() {
+  Widget _buildErrorPlaceholder() {
     return Container(
-      // padding: const EdgeInsets.all(12),
+      color: Colors.grey.shade100,
+      child: const Icon(
+        Icons.image_not_supported,
+        size: 50,
+        color: Colors.grey,
+      ),
+    );
+  }
+
+  Widget _buildPostedBy(Product product, AppLocalizations l10n) {
+    final sellerName =
+        product.sellerName.isNotEmpty
+            ? product.sellerName
+            : 'Mohamed Ould Salem';
+    final sellerImage = product.sellerImage;
+    final isNetworkImage = sellerImage.startsWith('http');
+
+    return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04), // Softer shadow
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
             spreadRadius: 0,
@@ -520,33 +683,52 @@ class ProductDetailScreen extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Image.asset(
-              'lib/assets/images/about farmer iamge.png',
-              width: 60,
-              height: 65,
-              fit: BoxFit.cover,
-            ),
+            child:
+                isNetworkImage
+                    ? Image.network(
+                      sellerImage,
+                      width: 60,
+                      height: 65,
+                      fit: BoxFit.cover,
+                      errorBuilder:
+                          (context, error, stackTrace) => Image.asset(
+                            'lib/assets/images/farmer image.png',
+                            width: 60,
+                            height: 65,
+                            fit: BoxFit.cover,
+                          ),
+                    )
+                    : Image.asset(
+                      'lib/assets/images/farmer image.png',
+                      width: 60,
+                      height: 65,
+                      fit: BoxFit.cover,
+                    ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Posted by',
-                  style: TextStyle(fontSize: 12, color: Colors.black),
+                Text(
+                  l10n.postedBy,
+                  style: const TextStyle(fontSize: 12, color: Colors.black),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Mohamed Ould Salem',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                Text(
+                  sellerName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 GestureDetector(
-                  onTap: () => Get.toNamed('/sellerProfile'),
-                  child: const Text(
-                    'View Profile',
-                    style: TextStyle(
+                  onTap:
+                      () => Get.toNamed('/sellerProfile', arguments: product),
+                  child: Text(
+                    l10n.viewProfile,
+                    style: const TextStyle(
                       color: Color(0xFF1B834F),
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -563,21 +745,164 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAdMeta() {
+  Widget _buildAdMeta(
+    BuildContext context,
+    ProductController controller,
+    Product product,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
-              'Ad ID: 1290876589',
-              style: TextStyle(fontSize: 13, color: Colors.black87),
-            ),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.adId(product.id),
+                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
         TextButton.icon(
-          onPressed: () {},
+          onPressed: () {
+            final reasonController = TextEditingController();
+            showDialog(
+              context: context,
+              builder:
+                  (context) => Dialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    insetPadding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 24,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Text(
+                              l10n.reportAd,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            l10n.reportAdReason,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black54,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: reasonController,
+                            decoration: InputDecoration(
+                              hintText: l10n.reason,
+                              border: const OutlineInputBorder(),
+                            ),
+                            maxLines: 3,
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size.fromHeight(48),
+                                    side: const BorderSide(
+                                      color: Color(0xFF1B834F),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    l10n.cancel,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1B834F),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    if (reasonController.text.trim().isEmpty) {
+                                      Get.snackbar(
+                                        l10n.required,
+                                        l10n.pleaseEnterReason,
+                                        snackPosition: SnackPosition.BOTTOM,
+                                        backgroundColor: Colors.redAccent,
+                                        colorText: Colors.white,
+                                      );
+                                      return;
+                                    }
+                                    Navigator.pop(context);
+                                    final success = await controller.reportAd(
+                                      product.id,
+                                      reasonController.text.trim(),
+                                    );
+                                    if (success) {
+                                      Get.snackbar(
+                                        l10n.success,
+                                        l10n.adReported,
+                                        snackPosition: SnackPosition.BOTTOM,
+                                        backgroundColor: const Color(
+                                          0xFF1B834F,
+                                        ),
+                                        colorText: Colors.white,
+                                      );
+                                    } else {
+                                      Get.snackbar(
+                                        l10n.error,
+                                        l10n.failedReport,
+                                        snackPosition: SnackPosition.BOTTOM,
+                                        backgroundColor: Colors.redAccent,
+                                        colorText: Colors.white,
+                                      );
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1B834F),
+                                    minimumSize: const Size.fromHeight(48),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    l10n.submit,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+            );
+          },
           style: TextButton.styleFrom(
             padding: EdgeInsets.zero,
             minimumSize: Size.zero,
@@ -588,9 +913,9 @@ class ProductDetailScreen extends StatelessWidget {
             size: 16,
             color: Color(0xFF1B834F),
           ),
-          label: const Text(
-            'Report Ad',
-            style: TextStyle(
+          label: Text(
+            l10n.reportAd,
+            style: const TextStyle(
               color: const Color(0xFF1B834F),
               fontSize: 13,
               fontWeight: FontWeight.w500,
@@ -601,7 +926,8 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRelatedAds(List<Product> products) {
+  Widget _buildRelatedAds(BuildContext context, List<Product> products) {
+    final l10n = AppLocalizations.of(context)!;
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -639,12 +965,26 @@ class ProductDetailScreen extends StatelessWidget {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(12),
                   ),
-                  child: Image.asset(
-                    product.imagePath,
-                    height: 110,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+                  child:
+                      product.imagePath.startsWith('http')
+                          ? Image.network(
+                            product.imagePath,
+                            height: 110,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (context, error, stackTrace) =>
+                                    _buildErrorPlaceholder(),
+                          )
+                          : Image.asset(
+                            product.imagePath,
+                            height: 110,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (context, error, stackTrace) =>
+                                    _buildErrorPlaceholder(),
+                          ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(10),
@@ -663,7 +1003,7 @@ class ProductDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${product.pricePerKg.toStringAsFixed(0)} MRU / Kg',
+                        l10n.pricePerKg(product.pricePerKg.toStringAsFixed(0)),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -672,7 +1012,9 @@ class ProductDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${product.availableQuantityKg.toStringAsFixed(0)} Kg Available',
+                        l10n.available(
+                          product.availableQuantityKg.toStringAsFixed(0),
+                        ),
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.black.withOpacity(0.6),
@@ -705,7 +1047,7 @@ class ProductDetailScreen extends StatelessWidget {
                             ],
                           ),
                           Text(
-                            '${product.daysAgo} day ago',
+                            l10n.daysAgo(product.daysAgo),
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.black.withOpacity(0.6),

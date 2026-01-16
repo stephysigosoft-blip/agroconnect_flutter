@@ -2,6 +2,7 @@ import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 import '../../models/send_otp_response.dart';
 import '../../utils/snackbar_helper.dart';
@@ -68,6 +69,11 @@ class _RegisterOtpVerificationScreenState
 
   Future<void> _onContinue() async {
     final otp = _otpControllers.map((e) => e.text).join();
+    if (otp.length < 6) {
+      final l10n = AppLocalizations.of(context)!;
+      SnackBarHelper.showError(l10n.required, l10n.pleaseEnterCompleteOtp);
+      return;
+    }
     if (otp.length == 6) {
       setState(() {
         _isVerifying = true;
@@ -84,31 +90,110 @@ class _RegisterOtpVerificationScreenState
           if (mounted) {
             final langCode = Localizations.localeOf(context).languageCode;
             SnackBarHelper.showSuccess(
-              'Success',
+              AppLocalizations.of(context)!.success,
               response.getLocalizedMessage(langCode),
             );
 
-            Navigator.pushNamed(
-              context,
-              '/register/name',
-              arguments: {
-                'phoneNumber': widget.phoneNumber,
-                'countryCode': widget.countryCode,
-              },
-            );
+            // Check if user existed before by checking created_at timestamp
+            // Backend creates user record during OTP verification
+            // So if created_at is recent, it's a new user
+            print('🔍 Checking if user existed before OTP verification...');
+            final userData = response.data['user'];
+            print('👥 User data: $userData');
+
+            bool isExistingUser = false;
+
+            if (userData != null && userData['created_at'] != null) {
+              try {
+                final createdAt = DateTime.parse(userData['created_at']);
+                final now = DateTime.now();
+                final difference = now.difference(createdAt);
+
+                print('📅 Account created at: $createdAt');
+                print(
+                  '🕐 Time since creation: ${difference.inSeconds} seconds ago',
+                );
+
+                // If account was created more than 1 minute ago, it existed before
+                // (not created during this OTP verification)
+                if (difference.inMinutes > 1) {
+                  isExistingUser = true;
+                  print(
+                    '✅ Existing user - account created ${difference.inDays} days ago',
+                  );
+                } else {
+                  print(
+                    '📝 New user - account just created ${difference.inSeconds} seconds ago',
+                  );
+                }
+              } catch (e) {
+                print('⚠️ Error parsing created_at: $e');
+              }
+            }
+
+            if (isExistingUser) {
+              // User account existed before - returning user
+              print('✅ Returning user detected');
+
+              final prefs = await SharedPreferences.getInstance();
+
+              // Save all user data to SharedPreferences
+              if (userData != null) {
+                if (userData['id'] != null) {
+                  await prefs.setString('user_id', userData['id'].toString());
+                }
+
+                final String? name =
+                    userData['name_en'] ??
+                    userData['name_ar'] ??
+                    userData['name_fr'];
+                if (name != null && name.isNotEmpty) {
+                  await prefs.setString('user_name', name);
+                }
+
+                if (userData['mobile'] != null) {
+                  await prefs.setString('user_phone', userData['mobile']);
+                }
+
+                if (userData['country_code'] != null) {
+                  await prefs.setString(
+                    'user_country_code',
+                    userData['country_code'],
+                  );
+                }
+              }
+
+              print('💾 User data saved to storage');
+              print('🏠 Navigating to home (returning user)');
+              Get.offAllNamed('/home');
+            } else {
+              // New user - account just created during this OTP verification
+              print('📝 First time registration - showing name input');
+              Navigator.pushNamed(
+                context,
+                '/register/name',
+                arguments: {
+                  'phoneNumber': widget.phoneNumber,
+                  'countryCode': widget.countryCode,
+                },
+              );
+            }
           }
         } else {
           if (mounted) {
             final langCode = Localizations.localeOf(context).languageCode;
             SnackBarHelper.showError(
-              'Error',
+              AppLocalizations.of(context)!.error,
               response?.getLocalizedMessage(langCode) ?? 'Invalid OTP',
             );
           }
         }
       } catch (e) {
         if (mounted) {
-          SnackBarHelper.showError('Error', 'An unexpected error occurred');
+          SnackBarHelper.showError(
+            AppLocalizations.of(context)!.error,
+            AppLocalizations.of(context)!.unexpectedError,
+          );
         }
       } finally {
         if (mounted) {
@@ -140,18 +225,21 @@ class _RegisterOtpVerificationScreenState
           _startTimer();
           final langCode = Localizations.localeOf(context).languageCode;
           SnackBarHelper.showSuccess(
-            'Success',
+            AppLocalizations.of(context)!.success,
             response.getLocalizedMessage(langCode),
           );
         } else if (response != null) {
           final langCode = Localizations.localeOf(context).languageCode;
           SnackBarHelper.showError(
-            'Error',
+            AppLocalizations.of(context)!.error,
             response.getLocalizedMessage(langCode),
           );
         }
       } catch (e) {
-        SnackBarHelper.showError('Error', 'An unexpected error occurred');
+        SnackBarHelper.showError(
+          AppLocalizations.of(context)!.error,
+          AppLocalizations.of(context)!.unexpectedError,
+        );
       } finally {
         if (mounted) {
           setState(() {

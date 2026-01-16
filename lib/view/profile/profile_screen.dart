@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../utils/snackbar_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../controllers/subscription_controller.dart';
+import '../../utils/snackbar_helper.dart';
+import '../../services/api_service.dart';
 
+import '../../controllers/my_ads_controller.dart';
+
+import '../../controllers/home_controller.dart';
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../../utils/localization_helper.dart';
+import '../../utils/api_constants.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,24 +23,66 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   String _selectedLanguage = 'English';
-  String _userName = 'Sidi Ould Mahmoud';
-  String _userPhone = '45 12 34 56';
-  String _userCountryCode = '+222';
+  String _userName = '';
+  String _userPhone = '';
+  String _userCountryCode = '';
+  String _userImage = '';
 
   @override
   void initState() {
     super.initState();
+    Get.put(SubscriptionController());
+    Get.put(MyAdsController());
     _loadCurrentLanguage();
+    _loadUserData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload user data when screen becomes visible (e.g., after editing profile)
     _loadUserData();
   }
 
   Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _userName = prefs.getString('user_name') ?? 'Sidi Ould Mahmoud';
-      _userPhone = prefs.getString('user_phone') ?? '45 12 34 56';
-      _userCountryCode = prefs.getString('user_country_code') ?? '+222';
+      _userName = prefs.getString('user_name') ?? '';
+      _userPhone = prefs.getString('user_phone') ?? '';
+      _userCountryCode = prefs.getString('user_country_code') ?? '';
+      _userImage = prefs.getString('user_image') ?? '';
     });
+
+    // Fetch from API to sync
+    try {
+      final apiService = Get.find<ApiService>();
+      final profileData = await apiService.getProfile();
+      if (profileData != null && profileData['status'] == true) {
+        final data = profileData['data'];
+        final userData = data['user'];
+        setState(() {
+          _userName =
+              userData['name_en'] ??
+              userData['name_ar'] ??
+              userData['name_fr'] ??
+              '';
+          _userPhone = userData['mobile'] ?? '';
+          _userCountryCode = userData['country_code'] ?? '';
+          String img = userData['image'] ?? '';
+          if (img.isNotEmpty && !img.startsWith('http')) {
+            img = '${ApiConstants.imageBaseUrl}$img';
+          }
+          _userImage = img;
+        });
+        // Update SharedPreferences
+        await prefs.setString('user_name', _userName);
+        await prefs.setString('user_phone', _userPhone);
+        await prefs.setString('user_country_code', _userCountryCode);
+        await prefs.setString('user_image', _userImage);
+      }
+    } catch (e) {
+      // Ignore errors silently as per "no UI change" rule
+    }
   }
 
   Future<void> _loadCurrentLanguage() async {
@@ -56,22 +105,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 12),
-            _buildUserInfo(),
-            const SizedBox(height: 24),
-            _buildSubscriptionCard(),
-            const SizedBox(height: 24),
-            _buildLanguageSelector(),
-            const SizedBox(height: 24),
-            _buildMenuList(),
-            const SizedBox(height: 24),
-            _buildSocialMediaIcons(),
-            const SizedBox(height: 40),
-          ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _loadUserData();
+        },
+        color: const Color(0xFF1B834F),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 12),
+              _buildUserInfo(),
+              const SizedBox(height: 24),
+              _buildSubscriptionCard(),
+              const SizedBox(height: 24),
+              _buildLanguageSelector(),
+              const SizedBox(height: 24),
+              _buildMenuList(),
+              const SizedBox(height: 24),
+              _buildSocialMediaIcons(),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
@@ -102,7 +158,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           GestureDetector(
-                            onTap: () => Get.back(),
+                            onTap:
+                                () => Get.find<HomeController>().jumpToTab(0),
                             child: Container(
                               width: 35,
                               height: 35,
@@ -117,9 +174,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                           ),
-                          const Text(
-                            'Profile',
-                            style: TextStyle(
+                          Text(
+                            AppLocalizations.of(context)!.profile,
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
@@ -163,17 +220,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
-                        child: Center(
-                          child: Text(
-                            _userName.isNotEmpty
-                                ? _userName[0].toUpperCase()
-                                : 'S',
-                            style: const TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
+                        child: ClipOval(
+                          child:
+                              _userImage.isNotEmpty
+                                  ? Image.network(
+                                    _userImage,
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) => Center(
+                                          child: Text(
+                                            (_userName.isNotEmpty
+                                                    ? _userName
+                                                    : AppLocalizations.of(
+                                                      context,
+                                                    )!.guestUser)
+                                                .characters
+                                                .first
+                                                .toUpperCase(),
+                                            style: const TextStyle(
+                                              fontSize: 40,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                  )
+                                  : Center(
+                                    child: Text(
+                                      (_userName.isNotEmpty
+                                              ? _userName
+                                              : AppLocalizations.of(
+                                                context,
+                                              )!.guestUser)
+                                          .characters
+                                          .first
+                                          .toUpperCase(),
+                                      style: const TextStyle(
+                                        fontSize: 40,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ),
                         ),
                       ),
                     ),
@@ -182,9 +272,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     bottom: 0,
                     right: 0,
                     child: GestureDetector(
-                      onTap: () {
-                        // Navigate to Edit Profile
-                        Get.toNamed('/editProfile');
+                      onTap: () async {
+                        // Navigate to Edit Profile and refresh on return
+                        await Get.toNamed('/editProfile');
+                        // Reload data after returning from edit screen
+                        _loadUserData();
                       },
                       child: Container(
                         width: 32,
@@ -221,7 +313,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       children: [
         Text(
-          _userName,
+          _userName.isNotEmpty
+              ? _userName
+              : AppLocalizations.of(context)!.guestUser,
           style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -229,14 +323,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
-          '10 Published Ads',
-          style: TextStyle(
-            fontSize: 13,
-            color: Color(0xFF1B834F),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        Obx(() {
+          final count = Get.find<MyAdsController>().activeAds.length;
+          return Text(
+            AppLocalizations.of(context)!.publishedAds(count),
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF1B834F),
+              fontWeight: FontWeight.w600,
+            ),
+          );
+        }),
         const SizedBox(height: 6),
         Text(
           '$_userCountryCode $_userPhone',
@@ -281,9 +378,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Subscription',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.subscription,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
@@ -291,7 +388,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Upgrade your plan to sell your products',
+                  AppLocalizations.of(context)!.upgradeDescription,
                   style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                 ),
               ],
@@ -309,28 +406,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               borderRadius: BorderRadius.circular(25),
             ),
-            child: ElevatedButton(
-              onPressed: () => Get.toNamed('/buyPackages'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
+            child: Obx(() {
+              final controller = Get.find<SubscriptionController>();
+              return ElevatedButton(
+                onPressed:
+                    controller.isLoading.value
+                        ? null
+                        : () async {
+                          await controller.fetchAllPackages();
+                          Get.toNamed('/buyPackages');
+                        },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-              child: const Text(
-                'Upgrade',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
+                child:
+                    controller.isLoading.value
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                        : Text(
+                          AppLocalizations.of(context)!.upgrade,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+              );
+            }),
           ),
         ],
       ),
@@ -340,9 +456,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildLanguageSelector() {
     return Column(
       children: [
-        const Text(
-          'Change Language',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)!.changeLanguage,
+          style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Colors.black,
@@ -359,18 +475,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Expanded(
                 child: _buildLanguageOption(
+                  AppLocalizations.of(context)!.french,
                   'Français',
                   _selectedLanguage == 'Français',
                 ),
               ),
               Expanded(
                 child: _buildLanguageOption(
+                  AppLocalizations.of(context)!.english,
                   'English',
                   _selectedLanguage == 'English',
                 ),
               ),
               Expanded(
                 child: _buildLanguageOption(
+                  AppLocalizations.of(context)!.arabic,
                   'عربي',
                   _selectedLanguage == 'عربي',
                 ),
@@ -382,9 +501,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildLanguageOption(String language, bool isSelected) {
+  Widget _buildLanguageOption(
+    String label,
+    String languageCode,
+    bool isSelected,
+  ) {
     return GestureDetector(
-      onTap: () => _changeLanguage(language),
+      onTap: () => _changeLanguage(languageCode),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
@@ -392,7 +515,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           borderRadius: BorderRadius.circular(25),
         ),
         child: Text(
-          language,
+          label,
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 14,
@@ -424,52 +547,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           _buildMenuItem(
             icon: Icons.grid_view,
-            title: 'My Ads',
+            title: AppLocalizations.of(context)!.myAds,
             onTap: () => Get.toNamed('/myAds'),
           ),
           _buildMenuItem(
             icon: Icons.card_membership,
-            title: 'My Packages',
-            onTap: () => Get.toNamed('/myPackages'),
+            title: AppLocalizations.of(context)!.myPackages,
+            onTap: () async {
+              final controller = Get.find<SubscriptionController>();
+              await controller.fetchMyPackages();
+              Get.toNamed('/myPackages');
+            },
           ),
           _buildMenuItem(
             icon: Icons.shopping_bag_outlined,
-            title: 'Orders',
+            title: AppLocalizations.of(context)!.orders,
             onTap: () => Get.toNamed('/orders'),
           ),
           _buildMenuItem(
             icon: Icons.perm_identity,
-            title: 'Identity Verification (KYC)',
+            title: AppLocalizations.of(context)!.identityVerificationKyc,
             onTap: () => Get.toNamed('/identityVerification'),
           ),
           _buildMenuItem(
             icon: Icons.settings_outlined,
-            title: 'Settings',
+            title: AppLocalizations.of(context)!.settings,
             onTap: () => Get.toNamed('/settings'),
           ),
           _buildMenuItem(
             icon: Icons.info_outline,
-            title: 'About Us',
+            title: AppLocalizations.of(context)!.aboutUs,
             onTap: () => Get.toNamed('/aboutUs'),
           ),
           _buildMenuItem(
             icon: Icons.chat_bubble_outline,
-            title: 'Help & Support',
+            title: AppLocalizations.of(context)!.helpSupport,
             onTap: () => Get.toNamed('/helpSupport'),
           ),
           _buildMenuItem(
             icon: Icons.description_outlined,
-            title: 'Terms & Conditions',
+            title: AppLocalizations.of(context)!.termsConditions,
             onTap: () => Get.toNamed('/termsConditions'),
           ),
           _buildMenuItem(
             icon: Icons.shield_outlined,
-            title: 'Privacy Policy',
+            title: AppLocalizations.of(context)!.privacyPolicy,
             onTap: () => Get.toNamed('/privacyPolicy'),
           ),
           _buildMenuItem(
             icon: Icons.logout,
-            title: 'Logout',
+            title: AppLocalizations.of(context)!.logout,
             onTap: _showLogoutDialog,
             isLogout: true,
             showChevron: false,
@@ -523,7 +650,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 // No, image shows "Logout" with an icon that looks like a C with arrow pointing left.
                 // let's use Icons.exit_to_app or similar but rotated?
                 // Or just standard logout icon.
-                // The image clearly shows a red logout icon on the LEFT. Text is "Logout".
+                // The image clearly shows a red logout icon on the LEFT.- [x] Integrate Remaining APIs
+                // - [x] Update `ApiConstants` with all missing endpoints
+                // - [x] Update `ApiService` with corresponding methods
+                // - [/] Integrate Profile & KYC APIs
                 // Is there a trailing icon?
                 // Image: No chevron for logout.
               ],
@@ -566,8 +696,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
         } catch (e) {
           SnackBarHelper.showError(
-            'Error',
-            'Connection Error: Please stop the app and "Run" again to link the new social media plugin correctly. \nDetails: $e',
+            AppLocalizations.of(context)!.error,
+            AppLocalizations.of(context)!.connectionError(e.toString()),
           );
         }
       },
@@ -633,9 +763,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
 
                   // Title
-                  const Text(
-                    'Logout',
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.logout,
+                    style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
@@ -644,10 +774,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 10),
 
                   // Message
-                  const Text(
-                    'Are you sure you want to logout?',
+                  Text(
+                    AppLocalizations.of(context)!.logoutConfirmation,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: Colors.black54),
+                    style: const TextStyle(fontSize: 16, color: Colors.black54),
                   ),
                   const SizedBox(height: 24),
 
@@ -670,9 +800,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text(
-                              'No',
-                              style: TextStyle(
+                            child: Text(
+                              AppLocalizations.of(context)!.no,
+                              style: const TextStyle(
                                 color: Color(0xFF1B834F),
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -690,9 +820,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: ElevatedButton(
                             onPressed: () async {
                               Navigator.of(context).pop(); // Close sheet first
+
+                              // Call logout API
+                              final apiService = Get.find<ApiService>();
+                              await apiService.logout();
+
+                              // Clear local storage regardless of API response
                               final prefs =
                                   await SharedPreferences.getInstance();
                               await prefs.clear();
+
+                              // Navigate to language selection screen
                               Get.offAllNamed('/languageSelection');
                             },
                             style: ElevatedButton.styleFrom(
@@ -702,9 +840,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               elevation: 0,
                             ),
-                            child: const Text(
-                              'Logout',
-                              style: TextStyle(
+                            child: Text(
+                              AppLocalizations.of(context)!.logout,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,

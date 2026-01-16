@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/identity_verification_controller.dart';
+import '../../l10n/app_localizations.dart';
 
 class IdentityVerificationScreen extends StatelessWidget {
   const IdentityVerificationScreen({super.key});
@@ -36,9 +37,9 @@ class IdentityVerificationScreen extends StatelessWidget {
             ),
           ),
         ),
-        title: const Text(
-          'Identity Verification',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.identityVerificationKyc,
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -50,19 +51,19 @@ class IdentityVerificationScreen extends StatelessWidget {
         child: Column(
           children: [
             _buildUploadSection(
-              title: "Upload National ID Proof",
+              title: AppLocalizations.of(context)!.uploadNationalIdProof,
               type: 'national',
               controller: controller,
             ),
             const SizedBox(height: 16),
             _buildUploadSection(
-              title: "Upload Business certificate",
+              title: AppLocalizations.of(context)!.uploadBusinessCertificate,
               type: 'business',
               controller: controller,
             ),
             const SizedBox(height: 16),
             _buildUploadSection(
-              title: "Upload Farm certificate (optional)",
+              title: AppLocalizations.of(context)!.uploadFarmCertificate,
               type: 'farm',
               controller: controller,
             ),
@@ -76,8 +77,48 @@ class IdentityVerificationScreen extends StatelessWidget {
           child: Obx(
             () => ElevatedButton(
               onPressed:
-                  controller.isSubmitEnabled
-                      ? () => _showSubmissionPopup(context)
+                  !controller.isLoading.value
+                      ? () async {
+                        if (controller.nationalIDProofs.isEmpty) {
+                          Get.snackbar(
+                            AppLocalizations.of(context)!.required,
+                            AppLocalizations.of(
+                              context,
+                            )!.pleaseUploadNationalId,
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.redAccent,
+                            colorText: Colors.white,
+                          );
+                          return;
+                        }
+                        if (controller.businessCertificates.isEmpty) {
+                          Get.snackbar(
+                            AppLocalizations.of(context)!.required,
+                            AppLocalizations.of(
+                              context,
+                            )!.pleaseUploadBusinessCertificate,
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.redAccent,
+                            colorText: Colors.white,
+                          );
+                          return;
+                        }
+
+                        final success = await controller.submitDocuments();
+                        if (success) {
+                          _showSubmissionPopup(context);
+                        } else {
+                          Get.snackbar(
+                            AppLocalizations.of(context)!.error,
+                            AppLocalizations.of(
+                              context,
+                            )!.failedToUploadDocuments,
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.red,
+                            colorText: Colors.white,
+                          );
+                        }
+                      }
                       : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1B834F),
@@ -88,14 +129,24 @@ class IdentityVerificationScreen extends StatelessWidget {
                 ),
                 elevation: 0,
               ),
-              child: const Text(
-                'Verify',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
+              child:
+                  controller.isLoading.value
+                      ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                      : Text(
+                        AppLocalizations.of(context)!.verify,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
             ),
           ),
         ),
@@ -217,16 +268,19 @@ class IdentityVerificationScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Documents submitted',
+                Text(
+                  AppLocalizations.of(context)!.documentsSubmitted,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'we have received your documents. Review usually takes 10-15 Minutes. You’ll be notified when verification is complete',
+                Text(
+                  AppLocalizations.of(context)!.documentsSubmittedDesc,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                  style: const TextStyle(fontSize: 14, color: Colors.black54),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
@@ -242,9 +296,9 @@ class IdentityVerificationScreen extends StatelessWidget {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'Done',
-                    style: TextStyle(
+                  child: Text(
+                    AppLocalizations.of(context)!.done,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
+import '../../controllers/subscription_controller.dart';
 
 class BuyPackagesScreen extends StatelessWidget {
   const BuyPackagesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final SubscriptionController controller = Get.put(SubscriptionController());
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -31,9 +34,9 @@ class BuyPackagesScreen extends StatelessWidget {
             ),
           ),
         ),
-        title: const Text(
-          'Buy Packages',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.buyPackages,
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -41,46 +44,99 @@ class BuyPackagesScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildBanner(),
-            const SizedBox(height: 24),
-            const Text(
-              'Buy Packages',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification scrollInfo) {
+          if (scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent) {
+            if (controller.hasMoreAllPackages.value &&
+                !controller.isLoadingMoreAllPackages.value) {
+              controller.fetchAllPackages(loadMore: true);
+            }
+          }
+          return false;
+        },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildBanner(context, controller),
+              const SizedBox(height: 24),
+              Text(
+                AppLocalizations.of(context)!.buyPackages,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            _buildPackageCard(
-              ads: '10 Ads',
-              validity: 'Valid for 30 days',
-              price: '100 MRU',
-            ),
-            const SizedBox(height: 12),
-            _buildPackageCard(
-              ads: '20 Ads',
-              validity: 'Valid for 30 days',
-              price: '2000 MRU',
-            ),
-            const SizedBox(height: 12),
-            _buildPackageCard(
-              ads: '30 Ads',
-              validity: 'Valid for 30 days',
-              price: '3000 MRU',
-            ),
-          ],
+              const SizedBox(height: 16),
+              Obx(() {
+                if (controller.isLoading.value &&
+                    controller.allPackages.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF1B834F),
+                      ),
+                    ),
+                  );
+                }
+
+                if (controller.allPackages.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Text(
+                        AppLocalizations.of(context)!.noPackagesAvailable,
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    ...controller.allPackages.map((package) {
+                      final l10n = AppLocalizations.of(context)!;
+                      final ads = package['total_ads']?.toString() ?? '0';
+                      final validity = l10n.validityLabel(
+                        (package['validity_days'] ?? '0').toString(),
+                      );
+                      final price = '${package['price'] ?? '0'} MRU';
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildPackageCard(
+                          packageId: package['id'],
+                          ads: l10n.adsAvailable(ads),
+                          validity: validity,
+                          price: price,
+                          controller: controller,
+                          l10n: l10n,
+                        ),
+                      );
+                    }).toList(),
+                    if (controller.isLoadingMoreAllPackages.value)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF1B834F),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              }),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildBanner() {
+  Widget _buildBanner(BuildContext context, SubscriptionController controller) {
     return Container(
       width: double.infinity,
       height: 160,
@@ -105,9 +161,9 @@ class BuyPackagesScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Buy More Packages',
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.buyMorePackages,
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -118,29 +174,6 @@ class BuyPackagesScreen extends StatelessWidget {
               'Vivamus vestibulum urna sed turpis\nimperdiet, eget posuere lacus rhoncus.\nSuspendisse molestie,',
               style: TextStyle(color: Colors.white, fontSize: 11),
             ),
-            const Spacer(),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.5)),
-                ),
-                child: const Text(
-                  'Buy Now',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -148,9 +181,12 @@ class BuyPackagesScreen extends StatelessWidget {
   }
 
   Widget _buildPackageCard({
+    required dynamic packageId,
     required String ads,
     required String validity,
     required String price,
+    required SubscriptionController controller,
+    required AppLocalizations l10n,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -220,11 +256,10 @@ class BuyPackagesScreen extends StatelessWidget {
               ElevatedButton(
                 onPressed: () {
                   Get.toNamed(
-                    '/adPostedSuccess',
+                    '/kycVerification',
                     arguments: {
-                      'title': 'PACKAGE BOUGHT SUCCESSFULLY',
-                      'buttonText': 'My Packages',
-                      'onButtonPressed': () => Get.offNamed('/myPackages'),
+                      'packageId': packageId,
+                      'paymentMethod': '1', // Default as per Postman
                     },
                   );
                 },
@@ -237,9 +272,9 @@ class BuyPackagesScreen extends StatelessWidget {
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
-                child: const Text(
-                  'Buy Now',
-                  style: TextStyle(
+                child: Text(
+                  l10n.buyNow,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,

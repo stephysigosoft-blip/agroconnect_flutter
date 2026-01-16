@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 
 import '../../services/api_service.dart';
 
@@ -48,8 +49,8 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
             ),
           ),
         ),
-        title: const Text(
-          'About Us',
+        title: Text(
+          AppLocalizations.of(context)!.aboutUs,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,

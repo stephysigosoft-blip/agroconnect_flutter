@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:math' as math;
+import '../../l10n/app_localizations.dart';
 
 class AdPostedSuccessScreen extends StatelessWidget {
   const AdPostedSuccessScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> args = Get.arguments ?? {};
+    final Map<String, dynamic> args =
+        Get.arguments is Map ? Map<String, dynamic>.from(Get.arguments) : {};
     final String title = args['title'] ?? 'AD POSTED SUCCESSFULLY';
     final String buttonText = args['buttonText'] ?? 'Preview Ad';
     final VoidCallback onButtonPressed =
@@ -25,7 +27,7 @@ class AdPostedSuccessScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
         leading: Center(
           child: GestureDetector(
-            onTap: () => Get.back(),
+            onTap: () => Get.offAllNamed('/home'),
             child: Container(
               width: 35,
               height: 35,
@@ -65,25 +67,52 @@ class AdPostedSuccessScreen extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
-            child: ElevatedButton(
-              onPressed: onButtonPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1B834F),
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton(
+                  onPressed: onButtonPressed,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B834F),
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
-                elevation: 0,
-              ),
-              child: Text(
-                buttonText,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: () => Get.offAllNamed('/home'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    side: const BorderSide(
+                      color: Color(0xFF1B834F),
+                      width: 1.2,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    AppLocalizations.of(context)!.cancel,
+                    style: const TextStyle(
+                      color: Color(0xFF1B834F),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ],

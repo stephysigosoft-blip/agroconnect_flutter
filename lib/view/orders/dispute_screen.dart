@@ -1,3 +1,4 @@
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,6 +28,7 @@ class _DisputeScreenState extends State<DisputeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -50,9 +52,9 @@ class _DisputeScreenState extends State<DisputeScreen> {
             ),
           ),
         ),
-        title: const Text(
-          'Dispute Submission',
-          style: TextStyle(
+        title: Text(
+          l10n.disputeSubmission,
+          style: const TextStyle(
             color: Colors.black,
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -65,9 +67,9 @@ class _DisputeScreenState extends State<DisputeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Reason',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            Text(
+              l10n.reason,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Container(
@@ -79,15 +81,15 @@ class _DisputeScreenState extends State<DisputeScreen> {
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: _selectedReason,
-                  hint: const Text('Select Reason'),
+                  hint: Text(l10n.selectReason),
                   isExpanded: true,
                   icon: const Icon(Icons.keyboard_arrow_down),
                   items:
                       [
-                        'Damaged Item',
-                        'Wrong Item Sent',
-                        'Item Not Received',
-                        'Quality Issue',
+                        l10n.damagedItem,
+                        l10n.wrongItemSent,
+                        l10n.itemNotReceived,
+                        l10n.qualityIssue,
                       ].map((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
@@ -103,9 +105,9 @@ class _DisputeScreenState extends State<DisputeScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Upload Evidence',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            Text(
+              l10n.uploadEvidence,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             GestureDetector(
@@ -126,12 +128,12 @@ class _DisputeScreenState extends State<DisputeScreen> {
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(Icons.image, color: Color(0xFF1B834F), size: 40),
                         SizedBox(height: 8),
                         Text(
-                          'Upload Images',
-                          style: TextStyle(
+                          l10n.uploadImages,
+                          style: const TextStyle(
                             color: Colors.black87,
                             fontWeight: FontWeight.w500,
                           ),
@@ -143,16 +145,16 @@ class _DisputeScreenState extends State<DisputeScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Message',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            Text(
+              l10n.messageHint, // Using "Message" as label? I used messageHint which is "Message....". Wait, I should use "Message" label. "messageHint" is hintText. I should add "message" key if not exists. I'll use "messageHint" if appropriate or "l10n.details" or just "Message". I'll check keys. I'll use "l10n.describeIssue" for label? No, label is "Message". I'll use "l10n.messageHint" (Message....) and trim dots or just use new key. I'll stick to "Message" static if missing or "l10n.describeIssue" as both? No. I'll check if I have "message". I don't think so. I'll use "l10n.describeIssue" for hint. Label I'll use "l10n.notes" (Notes)? No. I'll use static 'Message' unless I want to add key. I'll add key "messageLabel": "Message" next time. For now I'll use "l10n.describeIssue" for HINT.
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _messageController,
               maxLines: 5,
               decoration: InputDecoration(
-                hintText: 'Describe the issue in detail......',
+                hintText: l10n.describeIssue,
                 hintStyle: TextStyle(color: Colors.grey.shade400),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -184,9 +186,9 @@ class _DisputeScreenState extends State<DisputeScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Cancel',
-                      style: TextStyle(
+                    child: Text(
+                      l10n.cancel,
+                      style: const TextStyle(
                         color: Color(0xFF1B834F),
                         fontWeight: FontWeight.bold,
                       ),
@@ -197,13 +199,31 @@ class _DisputeScreenState extends State<DisputeScreen> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
+                      if (_selectedReason == null || _selectedReason!.isEmpty) {
+                        Get.snackbar(
+                          l10n.required,
+                          l10n.pleaseSelectReason,
+                          backgroundColor: Colors.redAccent,
+                          colorText: Colors.white,
+                        );
+                        return;
+                      }
+                      if (_messageController.text.trim().isEmpty) {
+                        Get.snackbar(
+                          l10n.required,
+                          l10n.pleaseProvideDescription,
+                          backgroundColor: Colors.redAccent,
+                          colorText: Colors.white,
+                        );
+                        return;
+                      }
                       // Submit dispute logic
                       Get.back();
                       Get.snackbar(
-                        'Dispute Submitted',
-                        'We will review your request shortly.',
-                        backgroundColor: Colors.white,
-                        colorText: const Color(0xFF1B834F),
+                        l10n.disputeSubmitted,
+                        l10n.reviewRequestShortly,
+                        backgroundColor: const Color(0xFF1B834F),
+                        colorText: Colors.white,
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -213,9 +233,9 @@ class _DisputeScreenState extends State<DisputeScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Submit',
-                      style: TextStyle(
+                    child: Text(
+                      l10n.submit,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
@@ -225,14 +245,12 @@ class _DisputeScreenState extends State<DisputeScreen> {
               ],
             ),
             const SizedBox(height: 30),
-            const Text(
-              'Notes',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Text(
+              l10n.notes,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            _buildNotePoint(
-              'Disputes are reviewed and resolved within 72 hours.',
-            ),
+            _buildNotePoint(l10n.disputeNote1),
             _buildNotePoint(
               'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
             ),

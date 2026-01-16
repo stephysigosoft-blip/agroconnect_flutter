@@ -7,6 +7,13 @@ class AdRepostedSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Map<String, dynamic> args = Get.arguments ?? {};
+    final VoidCallback onButtonPressed =
+        args['onButtonPressed'] ??
+        () {
+          Get.offAllNamed('/home');
+        };
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -18,7 +25,7 @@ class AdRepostedSuccessScreen extends StatelessWidget {
           padding: const EdgeInsets.only(left: 16.0),
           child: Center(
             child: GestureDetector(
-              onTap: () => Get.back(),
+              onTap: () => Get.offAllNamed('/home'),
               child: Container(
                 width: 35,
                 height: 35,
@@ -53,14 +60,12 @@ class AdRepostedSuccessScreen extends StatelessWidget {
                   letterSpacing: 0.5,
                 ),
               ),
-              const SizedBox(height: 200),
+              const SizedBox(height: 180),
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Get.offAllNamed('/home');
-                  },
+                  onPressed: onButtonPressed,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1B834F),
                     foregroundColor: Colors.white,
@@ -72,6 +77,25 @@ class AdRepostedSuccessScreen extends StatelessWidget {
                   child: const Text(
                     'Preview Ad',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () => Get.offAllNamed('/home'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50),
+                  side: const BorderSide(color: Color(0xFF1B834F), width: 1.2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: Color(0xFF1B834F),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),

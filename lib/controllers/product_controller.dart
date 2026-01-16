@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'package:dio/dio.dart' as dio;
 import '../models/product.dart';
+import '../services/api_service.dart';
 
 class ProductController extends GetxController {
   /// Categories (4)
@@ -12,110 +14,188 @@ class ProductController extends GetxController {
     'Poultry & Eggs',
   ];
 
-  /// All products (10)
-  final RxList<Product> allProducts =
-      <Product>[
-        const Product(
-          id: 'p1',
-          name: 'Millet',
-          category: 'Grains & Cereals',
-          pricePerKg: 120,
-          availableQuantityKg: 800,
-          location: 'Nouakchott',
-          daysAgo: 1,
-          imagePath: "lib/assets/images/product's/millet.png",
-        ),
-        const Product(
-          id: 'p2',
-          name: 'Sorghum',
-          category: 'Grains & Cereals',
-          pricePerKg: 110,
-          availableQuantityKg: 1200,
-          location: 'Rosso',
-          daysAgo: 2,
-          imagePath: "lib/assets/images/product's/sorghum.png",
-        ),
-        const Product(
-          id: 'p3',
-          name: 'Rice',
-          category: 'Grains & Cereals',
-          pricePerKg: 150,
-          availableQuantityKg: 2000,
-          location: 'Bogué',
-          daysAgo: 3,
-          imagePath: "lib/assets/images/product's/millet.png",
-        ),
-        const Product(
-          id: 'p4',
-          name: 'Tomato',
-          category: 'Vegetables',
-          pricePerKg: 90,
-          availableQuantityKg: 600,
-          location: 'Nouakchott',
-          daysAgo: 1,
-          imagePath: "lib/assets/images/product's/tomato.png",
-        ),
-        const Product(
-          id: 'p5',
-          name: 'Potato',
-          category: 'Vegetables',
-          pricePerKg: 80,
-          availableQuantityKg: 1000,
-          location: 'Kiffa',
-          daysAgo: 4,
-          imagePath: "lib/assets/images/product's/tomato.png",
-        ),
-        const Product(
-          id: 'p6',
-          name: 'Onion',
-          category: 'Vegetables',
-          pricePerKg: 70,
-          availableQuantityKg: 900,
-          location: 'Kaédi',
-          daysAgo: 2,
-          imagePath: "lib/assets/images/product's/tomato.png",
-        ),
-        const Product(
-          id: 'p7',
-          name: 'Beef',
-          category: 'Livestock & Meat',
-          pricePerKg: 450,
-          availableQuantityKg: 500,
-          location: 'Nouakchott',
-          daysAgo: 1,
-          imagePath: "lib/assets/images/product's/millet.png",
-        ),
-        const Product(
-          id: 'p8',
-          name: 'Mutton',
-          category: 'Livestock & Meat',
-          pricePerKg: 420,
-          availableQuantityKg: 400,
-          location: 'Tidjikja',
-          daysAgo: 3,
-          imagePath: "lib/assets/images/product's/millet.png",
-        ),
-        const Product(
-          id: 'p9',
-          name: 'Chicken',
-          category: 'Poultry & Eggs',
-          pricePerKg: 220,
-          availableQuantityKg: 700,
-          location: 'Nouadhibou',
-          daysAgo: 2,
-          imagePath: "lib/assets/images/product's/millet.png",
-        ),
-        const Product(
-          id: 'p10',
-          name: 'Eggs',
-          category: 'Poultry & Eggs',
-          pricePerKg: 200,
-          availableQuantityKg: 300,
-          location: 'Nouakchott',
-          daysAgo: 1,
-          imagePath: "lib/assets/images/product's/millet.png",
-        ),
-      ].obs;
+  final RxList<Product> allProducts = <Product>[].obs;
+
+  final RxInt currentPage = 1.obs;
+  final RxBool hasMore = true.obs;
+  final RxBool isLoadingMore = false.obs;
+
+  final RxBool isFetchingAll = false.obs;
+  final RxBool isFetchingDetails = false.obs;
+  final RxBool isFetchingSellerAds = false.obs;
+  final Rx<Product?> currentProductDetails = Rx<Product?>(null);
+  final RxList<Product> sellerAds = <Product>[].obs;
+  final RxString currentSellerId = ''.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    fetchAllProductsApi();
+  }
+
+  Future<void> fetchAllProductsApi({bool loadMore = false}) async {
+    try {
+      if (loadMore) {
+        if (isLoadingMore.value || !hasMore.value) return;
+        isLoadingMore.value = true;
+      } else {
+        isFetchingAll.value = true;
+        currentPage.value = 1;
+        hasMore.value = true;
+      }
+
+      final apiService = Get.find<ApiService>();
+      final response = await apiService.getAllProducts(page: currentPage.value);
+
+      if (response != null && response['status'] == true) {
+        final List data = _extractDataList(response['data']);
+        final newProducts = data.map((json) => Product.fromJson(json)).toList();
+
+        if (loadMore) {
+          allProducts.addAll(newProducts);
+        } else {
+          allProducts.value = newProducts;
+        }
+
+        hasMore.value = newProducts.length >= 20;
+        if (newProducts.isNotEmpty) {
+          currentPage.value++;
+        }
+      }
+    } finally {
+      isFetchingAll.value = false;
+      isLoadingMore.value = false;
+    }
+  }
+
+  List _extractDataList(dynamic rawData) {
+    if (rawData == null) return [];
+    if (rawData is List) return rawData;
+    if (rawData is Map) {
+      if (rawData.containsKey('data') && rawData['data'] is List) {
+        return rawData['data'];
+      }
+      for (var value in rawData.values) {
+        if (value is Map &&
+            value.containsKey('data') &&
+            value['data'] is List) {
+          return value['data'];
+        }
+        if (value is List) return value;
+      }
+    }
+    return [];
+  }
+
+  Future<void> fetchProductDetails(dynamic id) async {
+    try {
+      print('🚀 [ProductController] Fetching details for ID: $id');
+      isFetchingDetails.value = true;
+      // Only clear if we are fetching a DIFFERENT product to avoid flicker during refresh
+      if (currentProductDetails.value?.id.toString() != id.toString()) {
+        currentProductDetails.value = null;
+      }
+
+      final apiService = Get.find<ApiService>();
+      // Use getAdDetails instead of getProductDetails for ads
+      final response = await apiService.getAdDetails(id);
+
+      if (response != null && response['status'] == true) {
+        final dynamic rawData = response['data'];
+        if (rawData is! Map) {
+          print(
+            '❌ [ProductController] Expected Map in data, got: ${rawData.runtimeType}',
+          );
+          return;
+        }
+
+        final Map<String, dynamic> data = Map<String, dynamic>.from(rawData);
+        print('✅ [ProductController] Data received for ID: $id');
+
+        if (data.containsKey('ad') && data['ad'] != null) {
+          print('📦 [ProductController] Parsing main ad...');
+          currentProductDetails.value = Product.fromJson(
+            Map<String, dynamic>.from(data['ad']),
+          );
+        } else if (data.containsKey('product') && data['product'] != null) {
+          print('📦 [ProductController] Parsing main product...');
+          currentProductDetails.value = Product.fromJson(
+            Map<String, dynamic>.from(data['product']),
+          );
+        } else {
+          print('📦 [ProductController] Parsing data as product directly...');
+          currentProductDetails.value = Product.fromJson(data);
+        }
+      } else {
+        print(
+          '❌ [ProductController] getAdDetails failed. Trying fallback getProductDetails...',
+        );
+        final fallbackResponse = await apiService.getProductDetails(id);
+        if (fallbackResponse != null && fallbackResponse['status'] == true) {
+          final fallbackData = fallbackResponse['data'];
+          if (fallbackData is Map) {
+            final Map<String, dynamic> fData = Map<String, dynamic>.from(
+              fallbackData,
+            );
+            if (fData.containsKey('product') && fData['product'] != null) {
+              currentProductDetails.value = Product.fromJson(
+                Map<String, dynamic>.from(fData['product']),
+              );
+            } else {
+              currentProductDetails.value = Product.fromJson(fData);
+            }
+            print('✅ [ProductController] Fallback parsed successfully');
+          }
+        } else {
+          print(
+            '❌ [ProductController] Both getAdDetails and fallback failed. Response: $response',
+          );
+        }
+      }
+    } catch (e, stack) {
+      print('❌ [ProductController] Error in fetchProductDetails: $e');
+      print(stack);
+    } finally {
+      isFetchingDetails.value = false;
+    }
+  }
+
+  Future<void> fetchSellerAds(String sellerId) async {
+    try {
+      if (sellerId.isEmpty) return;
+      if (currentSellerId.value == sellerId && sellerAds.isNotEmpty) return;
+
+      print('🚀 [ProductController] Fetching ads for seller: $sellerId');
+      isFetchingSellerAds.value = true;
+      currentSellerId.value = sellerId;
+      sellerAds.clear();
+
+      final apiService = Get.find<ApiService>();
+      final response = await apiService.getAllProducts(
+        queryParameters: {'seller_id': sellerId, 'limit': 100},
+      );
+
+      if (response != null && response['status'] == true) {
+        final List data = _extractDataList(response['data']);
+        final products = data.map((json) => Product.fromJson(json)).toList();
+        sellerAds.assignAll(products);
+
+        // Also add unique products to allProducts to keep the main list updated
+        for (var p in products) {
+          if (!allProducts.any((existing) => existing.id == p.id)) {
+            allProducts.add(p);
+          }
+        }
+        print(
+          '✅ [ProductController] Loaded ${products.length} ads for seller $sellerId',
+        );
+      }
+    } catch (e) {
+      print('❌ [ProductController] Error fetching seller ads: $e');
+    } finally {
+      isFetchingSellerAds.value = false;
+    }
+  }
 
   /// Search & filters state
   final RxString searchQuery = ''.obs;
@@ -124,8 +204,6 @@ class ProductController extends GetxController {
   final RxInt selectedSortIndex = 0.obs;
 
   /// Quantity ranges used for filtering
-  /// 0 -> Any quantity (no restriction)
-  /// Others -> narrow ranges
   final List<RangeValues> quantityRanges = const [
     RangeValues(0, 5000), // Any quantity
     RangeValues(50, 100),
@@ -193,5 +271,21 @@ class ProductController extends GetxController {
     priceRange.value = const RangeValues(50, 500);
     selectedQuantityIndex.value = 0;
     selectedSortIndex.value = 0;
+  }
+
+  Future<bool> reportAd(String productId, String reason) async {
+    try {
+      final apiService = Get.find<ApiService>();
+      final formData = dio.FormData.fromMap({
+        'product_id': productId,
+        'reason': reason,
+        'comment': reason, // Mapping reason to comment as well for robustness
+      });
+
+      final response = await apiService.reportAd(formData);
+      return response != null && response['status'] == true;
+    } catch (e) {
+      return false;
+    }
   }
 }

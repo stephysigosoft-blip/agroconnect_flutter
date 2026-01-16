@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
+import '../../controllers/subscription_controller.dart';
 
 class MyPackagesScreen extends StatelessWidget {
   const MyPackagesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final SubscriptionController controller = Get.put(SubscriptionController());
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -31,9 +34,9 @@ class MyPackagesScreen extends StatelessWidget {
             ),
           ),
         ),
-        title: const Text(
-          'My Packages',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.myPackages,
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -45,20 +48,63 @@ class MyPackagesScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildBanner(),
+            _buildBanner(context, controller),
             const SizedBox(height: 24),
-            _buildActivePackageCard(
-              ads: '10 Ads Available',
-              validity: 'Valid for 30 days',
-              remaining: 30,
-            ),
+            Obx(() {
+              if (controller.isLoading.value && controller.myPackages.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: CircularProgressIndicator(color: Color(0xFF1B834F)),
+                  ),
+                );
+              }
+
+              if (controller.myPackages.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Text(AppLocalizations.of(context)!.noActivePackages),
+                  ),
+                );
+              }
+
+              return Column(
+                children:
+                    controller.myPackages.map((package) {
+                      final l10n = AppLocalizations.of(context)!;
+                      final ads = package['ads']?.toString() ?? '0';
+                      final totalAds =
+                          package['package']?['total_ads']?.toString() ??
+                          package['total_ads']?.toString() ??
+                          '0';
+                      final validity = l10n.validityLabel(
+                        (package['package']?['validity_days'] ??
+                                package['validity_days'] ??
+                                '0')
+                            .toString(),
+                      );
+                      final remaining = int.tryParse(ads) ?? 0;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildActivePackageCard(
+                          ads: l10n.adsAvailable(totalAds),
+                          validity: validity,
+                          remaining: remaining,
+                          l10n: l10n,
+                        ),
+                      );
+                    }).toList(),
+              );
+            }),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBanner() {
+  Widget _buildBanner(BuildContext context, SubscriptionController controller) {
     return Container(
       width: double.infinity,
       height: 160,
@@ -83,9 +129,9 @@ class MyPackagesScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Buy More Packages',
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.buyMorePackages,
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -100,7 +146,13 @@ class MyPackagesScreen extends StatelessWidget {
             Align(
               alignment: Alignment.bottomRight,
               child: GestureDetector(
-                onTap: () => Get.toNamed('/buyPackages'),
+                onTap: () async {
+                  print(
+                    '🖱️ [MyPackagesScreen] Banner Buy Now clicked -> Fetching and navigating',
+                  );
+                  await controller.fetchAllPackages();
+                  Get.toNamed('/buyPackages');
+                },
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
@@ -111,9 +163,9 @@ class MyPackagesScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.white.withOpacity(0.5)),
                   ),
-                  child: const Text(
-                    'Buy Now',
-                    style: TextStyle(
+                  child: Text(
+                    AppLocalizations.of(context)!.buyNow,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -132,6 +184,7 @@ class MyPackagesScreen extends StatelessWidget {
     required String ads,
     required String validity,
     required int remaining,
+    required AppLocalizations l10n,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -195,9 +248,9 @@ class MyPackagesScreen extends StatelessWidget {
           ),
           Column(
             children: [
-              const Text(
-                'Remaining Ads',
-                style: TextStyle(
+              Text(
+                l10n.remainingAdsLabel,
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Colors.black,

@@ -2,7 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../controllers/subscription_controller.dart';
+import '../../controllers/sell_controller.dart';
+import '../../controllers/home_controller.dart';
 import '../../utils/snackbar_helper.dart';
+import '../../models/product.dart';
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 
 class SellItemScreen extends StatefulWidget {
   const SellItemScreen({super.key});
@@ -16,6 +21,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final SellController _sellController = Get.put(SellController());
 
   final ImagePicker _picker = ImagePicker();
   List<XFile> _selectedImages = [];
@@ -34,7 +40,8 @@ class _SellItemScreenState extends State<SellItemScreen> {
 
   Future<void> _pickImage({ImageSource? source}) async {
     if (_selectedImages.length >= 4) {
-      SnackBarHelper.showError('Limit Reached', 'Maximum 4 images allowed');
+      final l10n = AppLocalizations.of(context)!;
+      SnackBarHelper.showError(l10n.limitReached, l10n.max4Images);
       return;
     }
 
@@ -54,7 +61,9 @@ class _SellItemScreenState extends State<SellItemScreen> {
                         Icons.photo_library,
                         color: const Color(0xFF1B834F),
                       ),
-                      title: const Text('Choose from Gallery'),
+                      title: Text(
+                        AppLocalizations.of(context)!.chooseFromGallery,
+                      ),
                       onTap: () => Navigator.pop(context, ImageSource.gallery),
                     ),
                     ListTile(
@@ -62,7 +71,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
                         Icons.camera_alt,
                         color: const Color(0xFF1B834F),
                       ),
-                      title: const Text('Take Photo'),
+                      title: Text(AppLocalizations.of(context)!.takePhoto),
                       onTap: () => Navigator.pop(context, ImageSource.camera),
                     ),
                   ],
@@ -74,7 +83,9 @@ class _SellItemScreenState extends State<SellItemScreen> {
       if (imageSource != null) {
         final XFile? image = await _picker.pickImage(
           source: imageSource,
-          imageQuality: 85,
+          imageQuality: 50, // Reduced quality to avoid 4MB limit
+          maxWidth: 1024, // Limit dimensions
+          maxHeight: 1024,
         );
         if (image != null) {
           setState(() {
@@ -83,16 +94,18 @@ class _SellItemScreenState extends State<SellItemScreen> {
         }
       }
     } catch (e) {
+      final l10n = AppLocalizations.of(context)!;
       SnackBarHelper.showError(
-        'Error',
-        'Failed to pick image: ${e.toString()}',
+        l10n.error,
+        '${l10n.failedToPickImage}: ${e.toString()}',
       );
     }
   }
 
   Future<void> _pickVideo({ImageSource? source}) async {
     if (_selectedVideo != null) {
-      SnackBarHelper.showError('Limit Reached', 'Maximum 1 video allowed');
+      final l10n = AppLocalizations.of(context)!;
+      SnackBarHelper.showError(l10n.limitReached, l10n.max1Video);
       return;
     }
 
@@ -112,7 +125,9 @@ class _SellItemScreenState extends State<SellItemScreen> {
                         Icons.video_library,
                         color: const Color(0xFF1B834F),
                       ),
-                      title: const Text('Choose from Gallery'),
+                      title: Text(
+                        AppLocalizations.of(context)!.chooseFromGallery,
+                      ),
                       onTap: () => Navigator.pop(context, ImageSource.gallery),
                     ),
                     ListTile(
@@ -120,7 +135,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
                         Icons.videocam,
                         color: Color(0xFF1B834F),
                       ),
-                      title: const Text('Record Video'),
+                      title: Text(AppLocalizations.of(context)!.recordVideo),
                       onTap: () => Navigator.pop(context, ImageSource.camera),
                     ),
                   ],
@@ -138,9 +153,10 @@ class _SellItemScreenState extends State<SellItemScreen> {
         }
       }
     } catch (e) {
+      final l10n = AppLocalizations.of(context)!;
       SnackBarHelper.showError(
-        'Error',
-        'Failed to pick video: ${e.toString()}',
+        l10n.error,
+        '${l10n.failedToPickVideo}: ${e.toString()}',
       );
     }
   }
@@ -164,7 +180,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: const Text('Select Region'),
+            title: Text(AppLocalizations.of(context)!.selectRegion),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -173,7 +189,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
                     Icons.location_on,
                     color: Color(0xFF1B834F),
                   ),
-                  title: const Text('Nouakchott'),
+                  title: Text(AppLocalizations.of(context)!.nouakchott),
                   onTap: () {
                     setState(() {
                       _selectedLocation = 'Nouakchott';
@@ -186,7 +202,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
                     Icons.location_on,
                     color: Color(0xFF1B834F),
                   ),
-                  title: const Text('Nouadhibou'),
+                  title: Text(AppLocalizations.of(context)!.nouadhibou),
                   onTap: () {
                     setState(() {
                       _selectedLocation = 'Nouadhibou';
@@ -199,7 +215,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
                     Icons.location_on,
                     color: Color(0xFF1B834F),
                   ),
-                  title: const Text('Rosso'),
+                  title: Text(AppLocalizations.of(context)!.rosso),
                   onTap: () {
                     setState(() {
                       _selectedLocation = 'Rosso';
@@ -214,38 +230,128 @@ class _SellItemScreenState extends State<SellItemScreen> {
   }
 
   void _handlePost() {
-    if (_productNameController.text.isEmpty) {
-      SnackBarHelper.showError('Validation Error', 'Please enter product name');
+    final l10n = AppLocalizations.of(context)!;
+    if (_productNameController.text.trim().isEmpty) {
+      SnackBarHelper.showError(l10n.required, l10n.pleaseEnterProductName);
+      return;
+    }
+    if (_priceController.text.trim().isEmpty) {
+      SnackBarHelper.showError(l10n.required, l10n.pleaseEnterPrice);
+      return;
+    }
+    if (double.tryParse(_priceController.text.trim()) == null ||
+        double.parse(_priceController.text.trim()) <= 0) {
+      SnackBarHelper.showError(l10n.invalidInput, l10n.validNumericPrice);
+      return;
+    }
+    if (_quantityController.text.trim().isEmpty) {
+      SnackBarHelper.showError(l10n.required, l10n.pleaseEnterQuantity);
+      return;
+    }
+    if (double.tryParse(_quantityController.text.trim()) == null ||
+        double.parse(_quantityController.text.trim()) <= 0) {
+      SnackBarHelper.showError(l10n.invalidInput, l10n.validNumericQuantity);
+      return;
+    }
+    if (_selectedLocation == null || _selectedLocation!.isEmpty) {
+      SnackBarHelper.showError(l10n.required, l10n.pleaseSelectRegion);
+      return;
+    }
+    if (_selectedImages.isEmpty) {
+      SnackBarHelper.showError(l10n.required, l10n.pleaseAddOneImage);
+      return;
+    }
+    if (_descriptionController.text.trim().isEmpty) {
+      SnackBarHelper.showError(l10n.required, l10n.pleaseEnterDescription);
       return;
     }
 
-    if (_priceController.text.isEmpty) {
-      SnackBarHelper.showError('Validation Error', 'Please enter price');
-      return;
-    }
+    _performPost();
+  }
 
-    if (_quantityController.text.isEmpty) {
-      SnackBarHelper.showError('Validation Error', 'Please enter quantity');
-      return;
-    }
+  Future<void> _performPost() async {
+    final l10n = AppLocalizations.of(context)!;
+    final response = await _sellController.postAd(
+      title: _productNameController.text,
+      pricePerKg: _priceController.text,
+      quantity: _quantityController.text,
+      description: _descriptionController.text,
+      region: _selectedLocation ?? '',
+      images: _selectedImages.map((e) => e.path).toList(),
+      latitude: '20.5184328', // Placeholder as per Postman
+      longitude: '-13.1491552', // Placeholder as per Postman
+    );
 
-    if (_selectedImages.isEmpty && _selectedVideo == null) {
-      SnackBarHelper.showError(
-        'Validation Error',
-        'Please upload at least one image or video',
+    if (response != null && response['status'] == true) {
+      final dynamic rawData = response['data'];
+      dynamic productData;
+
+      if (rawData is Map) {
+        productData = rawData['product'] ?? rawData;
+      } else if (rawData is List && rawData.isNotEmpty) {
+        productData = rawData.first;
+      } else {
+        productData = rawData;
+      }
+
+      Product? product;
+      if (productData != null && productData is Map) {
+        try {
+          product = Product.fromJson(Map<String, dynamic>.from(productData));
+        } catch (e) {
+          debugPrint('❌ Error parsing product from response: $e');
+        }
+      }
+
+      Get.toNamed(
+        '/adPostedSuccess',
+        arguments: {
+          'onButtonPressed': () {
+            if (product != null) {
+              Get.offNamed(
+                '/product',
+                arguments: {'product': product, 'showCancel': true},
+              );
+            } else {
+              Get.until(
+                (route) => Get.currentRoute == '/home' || route.isFirst,
+              );
+            }
+          },
+        },
       );
-      return;
-    }
-
-    // For demonstration, let's toggle between showing the popup and success
-    // In a real app, this would check if a package is selected
-    bool hasPackage =
-        _selectedImages.length > 2; // Arbitrary condition for demo
-
-    if (hasPackage) {
-      Get.toNamed('/adPostedSuccess');
     } else {
-      _showPackageErrorPopup(context);
+      // Check if user already has packages
+      final subController = Get.put(SubscriptionController());
+
+      // Ensure we have the latest package info before deciding
+      if (subController.myPackages.isEmpty) {
+        await subController.fetchMyPackages();
+      }
+
+      if (subController.myPackages.isNotEmpty) {
+        String errorMsg = l10n.failedToCreateAd;
+        if (response != null && response['message'] != null) {
+          final msg = response['message'];
+          // Handle if message is a map (validation errors) or string
+          if (msg is Map) {
+            errorMsg = msg.values.join('\n');
+          } else {
+            errorMsg = msg.toString();
+          }
+
+          // Sanitize technical backend errors
+          if (errorMsg.toLowerCase().contains('undefined variable') ||
+              errorMsg.toLowerCase().contains('exception') ||
+              errorMsg.toLowerCase().contains('sqlstate')) {
+            errorMsg = l10n.serverErrorPostAd;
+          }
+        }
+        SnackBarHelper.showError(l10n.error, errorMsg);
+      } else {
+        // If balance is insufficient or no package, show the popup
+        _showPackageErrorPopup(context);
+      }
     }
   }
 
@@ -262,16 +368,19 @@ class _SellItemScreenState extends State<SellItemScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Sorry !',
+                Text(
+                  AppLocalizations.of(context)!.sorry,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'You don’t have an active package. Please purchase a package to post your ad.',
+                Text(
+                  AppLocalizations.of(context)!.noActivePackageDesc,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 15, color: Colors.black54),
+                  style: const TextStyle(fontSize: 15, color: Colors.black54),
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -286,10 +395,10 @@ class _SellItemScreenState extends State<SellItemScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const FittedBox(
+                        child: FittedBox(
                           child: Text(
-                            'Cancel',
-                            style: TextStyle(
+                            AppLocalizations.of(context)!.cancel,
+                            style: const TextStyle(
                               color: Color(0xFF1B834F),
                               fontWeight: FontWeight.bold,
                             ),
@@ -300,8 +409,9 @@ class _SellItemScreenState extends State<SellItemScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
-                          Get.back();
+                        onPressed: () async {
+                          final controller = Get.put(SubscriptionController());
+                          await controller.fetchAllPackages();
                           Get.toNamed('/buyPackages');
                         },
                         style: ElevatedButton.styleFrom(
@@ -312,10 +422,10 @@ class _SellItemScreenState extends State<SellItemScreen> {
                           ),
                           elevation: 0,
                         ),
-                        child: const FittedBox(
+                        child: FittedBox(
                           child: Text(
-                            'Buy Package',
-                            style: TextStyle(
+                            AppLocalizations.of(context)!.buyPackage,
+                            style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
@@ -335,6 +445,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -344,7 +455,13 @@ class _SellItemScreenState extends State<SellItemScreen> {
         automaticallyImplyLeading: false,
         leading: Center(
           child: GestureDetector(
-            onTap: () => Get.back(),
+            onTap: () {
+              if (Navigator.canPop(context)) {
+                Get.back();
+              } else {
+                Get.find<HomeController>().jumpToTab(0);
+              }
+            },
             child: Container(
               width: 35,
               height: 35,
@@ -360,9 +477,9 @@ class _SellItemScreenState extends State<SellItemScreen> {
             ),
           ),
         ),
-        title: const Text(
-          'Sell Item',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.sellItem,
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -377,12 +494,12 @@ class _SellItemScreenState extends State<SellItemScreen> {
           children: [
             _buildImageUploadSection(),
             const SizedBox(height: 24),
-            _buildFormFields(),
+            _buildFormFields(l10n),
             const SizedBox(height: 24),
             _buildLocationSection(),
             const SizedBox(height: 24),
             _buildTextField(
-              label: 'Description',
+              label: l10n.description,
               controller: _descriptionController,
               hintText: '',
               maxLines: 4,
@@ -428,11 +545,11 @@ class _SellItemScreenState extends State<SellItemScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Padding(
-                              padding: EdgeInsets.all(16),
+                            Padding(
+                              padding: const EdgeInsets.all(16),
                               child: Text(
-                                'Select Media Type',
-                                style: TextStyle(
+                                AppLocalizations.of(context)!.selectMediaType,
+                                style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -443,7 +560,9 @@ class _SellItemScreenState extends State<SellItemScreen> {
                                 Icons.photo_library,
                                 color: const Color(0xFF1B834F),
                               ),
-                              title: const Text('Image from Gallery'),
+                              title: Text(
+                                AppLocalizations.of(context)!.imageFromGallery,
+                              ),
                               onTap:
                                   () => Navigator.pop(context, {
                                     'type': 'image',
@@ -455,7 +574,9 @@ class _SellItemScreenState extends State<SellItemScreen> {
                                 Icons.camera_alt,
                                 color: const Color(0xFF1B834F),
                               ),
-                              title: const Text('Take Photo'),
+                              title: Text(
+                                AppLocalizations.of(context)!.takePhoto,
+                              ),
                               onTap:
                                   () => Navigator.pop(context, {
                                     'type': 'image',
@@ -467,7 +588,9 @@ class _SellItemScreenState extends State<SellItemScreen> {
                                 Icons.video_library,
                                 color: const Color(0xFF1B834F),
                               ),
-                              title: const Text('Video from Gallery'),
+                              title: Text(
+                                AppLocalizations.of(context)!.videoFromGallery,
+                              ),
                               onTap:
                                   () => Navigator.pop(context, {
                                     'type': 'video',
@@ -479,7 +602,9 @@ class _SellItemScreenState extends State<SellItemScreen> {
                                 Icons.videocam,
                                 color: const Color(0xFF1B834F),
                               ),
-                              title: const Text('Record Video'),
+                              title: Text(
+                                AppLocalizations.of(context)!.recordVideo,
+                              ),
                               onTap:
                                   () => Navigator.pop(context, {
                                     'type': 'video',
@@ -516,9 +641,9 @@ class _SellItemScreenState extends State<SellItemScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Upload Images,Videos',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.uploadImagesVideos,
+                          style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: Colors.black,
@@ -526,7 +651,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Max 4 Images, 1 Video',
+                          AppLocalizations.of(context)!.maxImagesVideoDesc,
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.black.withOpacity(0.5),
@@ -545,7 +670,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Upload Images, Videos',
+                      AppLocalizations.of(context)!.uploadImagesVideos,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -556,81 +681,98 @@ class _SellItemScreenState extends State<SellItemScreen> {
                   if (canAddMore)
                     GestureDetector(
                       onTap: () async {
-                        final choice = await showModalBottomSheet<
-                          Map<String, dynamic>
-                        >(
-                          context: context,
-                          builder:
-                              (context) => SafeArea(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Padding(
-                                      padding: EdgeInsets.all(16),
-                                      child: Text(
-                                        'Add Media',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
+                        final choice =
+                            await showModalBottomSheet<Map<String, dynamic>>(
+                              context: context,
+                              builder:
+                                  (context) => SafeArea(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Text(
+                                            AppLocalizations.of(
+                                              context,
+                                            )!.addMedia,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        if (_selectedImages.length < 4) ...[
+                                          ListTile(
+                                            leading: const Icon(
+                                              Icons.photo_library,
+                                              color: const Color(0xFF1B834F),
+                                            ),
+                                            title: Text(
+                                              AppLocalizations.of(
+                                                context,
+                                              )!.imageFromGallery,
+                                            ),
+                                            onTap:
+                                                () => Navigator.pop(context, {
+                                                  'type': 'image',
+                                                  'source': ImageSource.gallery,
+                                                }),
+                                          ),
+                                          ListTile(
+                                            leading: const Icon(
+                                              Icons.camera_alt,
+                                              color: const Color(0xFF1B834F),
+                                            ),
+                                            title: Text(
+                                              AppLocalizations.of(
+                                                context,
+                                              )!.takePhoto,
+                                            ),
+                                            onTap:
+                                                () => Navigator.pop(context, {
+                                                  'type': 'image',
+                                                  'source': ImageSource.camera,
+                                                }),
+                                          ),
+                                        ],
+                                        if (_selectedVideo == null) ...[
+                                          ListTile(
+                                            leading: const Icon(
+                                              Icons.video_library,
+                                              color: const Color(0xFF1B834F),
+                                            ),
+                                            title: Text(
+                                              AppLocalizations.of(
+                                                context,
+                                              )!.videoFromGallery,
+                                            ),
+                                            onTap:
+                                                () => Navigator.pop(context, {
+                                                  'type': 'video',
+                                                  'source': ImageSource.gallery,
+                                                }),
+                                          ),
+                                          ListTile(
+                                            leading: const Icon(
+                                              Icons.videocam,
+                                              color: const Color(0xFF1B834F),
+                                            ),
+                                            title: Text(
+                                              AppLocalizations.of(
+                                                context,
+                                              )!.recordVideo,
+                                            ),
+                                            onTap:
+                                                () => Navigator.pop(context, {
+                                                  'type': 'video',
+                                                  'source': ImageSource.camera,
+                                                }),
+                                          ),
+                                        ],
+                                      ],
                                     ),
-                                    if (_selectedImages.length < 4) ...[
-                                      ListTile(
-                                        leading: const Icon(
-                                          Icons.photo_library,
-                                          color: const Color(0xFF1B834F),
-                                        ),
-                                        title: const Text('Image from Gallery'),
-                                        onTap:
-                                            () => Navigator.pop(context, {
-                                              'type': 'image',
-                                              'source': ImageSource.gallery,
-                                            }),
-                                      ),
-                                      ListTile(
-                                        leading: const Icon(
-                                          Icons.camera_alt,
-                                          color: const Color(0xFF1B834F),
-                                        ),
-                                        title: const Text('Take Photo'),
-                                        onTap:
-                                            () => Navigator.pop(context, {
-                                              'type': 'image',
-                                              'source': ImageSource.camera,
-                                            }),
-                                      ),
-                                    ],
-                                    if (_selectedVideo == null) ...[
-                                      ListTile(
-                                        leading: const Icon(
-                                          Icons.video_library,
-                                          color: const Color(0xFF1B834F),
-                                        ),
-                                        title: const Text('Video from Gallery'),
-                                        onTap:
-                                            () => Navigator.pop(context, {
-                                              'type': 'video',
-                                              'source': ImageSource.gallery,
-                                            }),
-                                      ),
-                                      ListTile(
-                                        leading: const Icon(
-                                          Icons.videocam,
-                                          color: const Color(0xFF1B834F),
-                                        ),
-                                        title: const Text('Record Video'),
-                                        onTap:
-                                            () => Navigator.pop(context, {
-                                              'type': 'video',
-                                              'source': ImageSource.camera,
-                                            }),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                        );
+                                  ),
+                            );
 
                         if (choice != null) {
                           if (choice['type'] == 'image') {
@@ -757,25 +899,25 @@ class _SellItemScreenState extends State<SellItemScreen> {
     );
   }
 
-  Widget _buildFormFields() {
+  Widget _buildFormFields(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildTextField(
-          label: 'Product Name',
+          label: l10n.productName,
           controller: _productNameController,
           hintText: '',
         ),
         const SizedBox(height: 16),
         _buildTextField(
-          label: 'Price',
+          label: l10n.price,
           controller: _priceController,
-          hintText: 'Ex. 100 MRU / Kg',
+          hintText: l10n.priceHint,
           keyboardType: TextInputType.number,
         ),
         const SizedBox(height: 16),
         _buildTextField(
-          label: 'Quantity',
+          label: l10n.quantity,
           controller: _quantityController,
           hintText: '',
           keyboardType: TextInputType.number,
@@ -854,8 +996,8 @@ class _SellItemScreenState extends State<SellItemScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Select Region',
+        Text(
+          AppLocalizations.of(context)!.selectRegion,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -899,22 +1041,34 @@ class _SellItemScreenState extends State<SellItemScreen> {
   Widget _buildPostButton() {
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _handlePost,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF1B834F),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+      child: Obx(
+        () => ElevatedButton(
+          onPressed: _sellController.isPosting.value ? null : _handlePost,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1B834F),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-        ),
-        child: const Text(
-          'Post',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          child:
+              _sellController.isPosting.value
+                  ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                  : Text(
+                    AppLocalizations.of(context)!.post,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
         ),
       ),
     );

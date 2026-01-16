@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 
 import '../../controllers/home_controller.dart';
+import '../../controllers/chat_controller.dart';
 import '../../controllers/product_controller.dart';
 import '../../controllers/wishlist_controller.dart';
 import 'home_content.dart';
@@ -20,6 +21,7 @@ class HomeScreen extends StatelessWidget {
     final HomeController controller = Get.put(HomeController());
     Get.put(ProductController());
     Get.put(WishlistController());
+    Get.put(ChatController());
     final l10n = AppLocalizations.of(context)!;
 
     return PersistentTabView(
@@ -166,7 +168,40 @@ class HomeScreen extends StatelessWidget {
         inactiveColorPrimary: Colors.grey,
       ),
       PersistentBottomNavBarItem(
-        icon: const Icon(Icons.chat_bubble_outline),
+        icon: Obx(() {
+          final count = Get.find<ChatController>().unreadCount.value;
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(Icons.chat_bubble_outline),
+              if (count > 0)
+                Positioned(
+                  right: -5,
+                  top: -5,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      count > 99 ? '99+' : '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        }),
         title: l10n.chat,
         activeColorPrimary: const Color(0xFF1B834F),
         inactiveColorPrimary: Colors.grey,

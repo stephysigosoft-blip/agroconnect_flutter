@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 import 'package:flutter_html/flutter_html.dart';
 import '../../services/api_service.dart';
 
@@ -48,8 +49,8 @@ class _TermsConditionsScreenState extends State<TermsConditionsScreen> {
             ),
           ),
         ),
-        title: const Text(
-          'Terms & Conditions',
+        title: Text(
+          AppLocalizations.of(context)!.termsConditions,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,

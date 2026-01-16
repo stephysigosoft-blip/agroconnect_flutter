@@ -6,6 +6,7 @@ import '../../main.dart';
 import '../../models/country_code.dart';
 import '../../services/api_service.dart';
 import '../../utils/localization_helper.dart';
+import 'package:country_picker/country_picker.dart';
 
 class RegisterPhoneInputScreen extends StatefulWidget {
   const RegisterPhoneInputScreen({super.key});
@@ -20,9 +21,18 @@ class _RegisterPhoneInputScreenState extends State<RegisterPhoneInputScreen> {
   final ApiService _apiService = Get.find<ApiService>();
 
   String _selectedCountryCode = '+222';
+  String _selectedFlag = '🇲🇷';
   List<CountryCode> _countryCodes = [];
   bool _isLoadingCountryCodes = false;
   bool _isSendingOtp = false;
+
+  String _getFlagForCode(String code) {
+    final cleanCode = code.replaceAll('+', '');
+    final country = CountryService().getAll().firstWhereOrNull(
+      (c) => c.phoneCode == cleanCode,
+    );
+    return country?.flagEmoji ?? '🏳️';
+  }
 
   @override
   void initState() {
@@ -57,6 +67,9 @@ class _RegisterPhoneInputScreenState extends State<RegisterPhoneInputScreen> {
             );
             _selectedCountryCode =
                 defaultCode?.countryCode ?? _countryCodes.first.countryCode;
+            _selectedFlag = _getFlagForCode(_selectedCountryCode);
+          } else if (_selectedCountryCode.isNotEmpty) {
+            _selectedFlag = _getFlagForCode(_selectedCountryCode);
           }
         });
       }
@@ -70,7 +83,33 @@ class _RegisterPhoneInputScreenState extends State<RegisterPhoneInputScreen> {
   }
 
   Future<void> _onContinue() async {
-    if (_phoneController.text.isNotEmpty && !_isSendingOtp) {
+    final phone = _phoneController.text.trim();
+    if (phone.isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
+      Get.snackbar(
+        l10n.required,
+        l10n.pleaseEnterPhoneNumber,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    if (phone.length < 6) {
+      final l10n = AppLocalizations.of(context)!;
+      Get.snackbar(
+        l10n.invalidInput,
+        l10n.pleaseEnterPhoneNumber,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    // Always proceed with OTP flow
+    if (!_isSendingOtp) {
       setState(() {
         _isSendingOtp = true;
       });
@@ -85,7 +124,7 @@ class _RegisterPhoneInputScreenState extends State<RegisterPhoneInputScreen> {
           if (mounted) {
             final langCode = Localizations.localeOf(context).languageCode;
             Get.snackbar(
-              'Success',
+              AppLocalizations.of(context)!.success,
               response.getLocalizedMessage(langCode),
               snackPosition: SnackPosition.BOTTOM,
               backgroundColor: const Color(0xFF1B834F).withOpacity(0.8),
@@ -114,7 +153,7 @@ class _RegisterPhoneInputScreenState extends State<RegisterPhoneInputScreen> {
             String errorMsg =
                 response?.getLocalizedMessage(langCode) ?? 'Failed to send OTP';
             Get.snackbar(
-              'Error',
+              AppLocalizations.of(context)!.error,
               errorMsg,
               snackPosition: SnackPosition.BOTTOM,
               backgroundColor: Colors.red.withOpacity(0.8),
@@ -125,7 +164,7 @@ class _RegisterPhoneInputScreenState extends State<RegisterPhoneInputScreen> {
       } catch (e) {
         if (mounted) {
           Get.snackbar(
-            'Error',
+            AppLocalizations.of(context)!.error,
             'An unexpected error occurred',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.red.withOpacity(0.8),
@@ -169,243 +208,295 @@ class _RegisterPhoneInputScreenState extends State<RegisterPhoneInputScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Select Country Code',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
+                child: SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight:
+                          MediaQuery.of(context).size.height -
+                          MediaQuery.of(context).viewInsets.bottom -
+                          120,
                     ),
-                    const SizedBox(height: 24),
-                    if (_isLoadingCountryCodes)
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(40.0),
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF1B834F),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context)!.selectCountryCode,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
                           ),
                         ),
-                      )
-                    else
-                      Flexible(
-                        child: StatefulBuilder(
-                          builder: (context, setDialogState) {
-                            final filteredCodes =
-                                tempSearchQuery.isEmpty
-                                    ? _countryCodes
-                                    : _countryCodes
-                                        .where(
-                                          (c) => c.countryCode.contains(
-                                            tempSearchQuery,
-                                          ),
-                                        )
-                                        .toList();
+                        const SizedBox(height: 24),
+                        if (_isLoadingCountryCodes)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(40.0),
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF1B834F),
+                              ),
+                            ),
+                          )
+                        else
+                          Flexible(
+                            child: StatefulBuilder(
+                              builder: (context, setDialogState) {
+                                final filteredCodes =
+                                    tempSearchQuery.isEmpty
+                                        ? _countryCodes
+                                        : _countryCodes
+                                            .where(
+                                              (c) => c.countryCode.contains(
+                                                tempSearchQuery,
+                                              ),
+                                            )
+                                            .toList();
 
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Search Bar
-                                Container(
-                                  margin: const EdgeInsets.only(bottom: 20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: TextField(
-                                    onChanged: (value) {
-                                      setDialogState(() {
-                                        tempSearchQuery = value;
-                                      });
-                                    },
-                                    decoration: InputDecoration(
-                                      hintText: 'Search country code...',
-                                      prefixIcon: const Icon(
-                                        Icons.search,
-                                        color: Colors.grey,
+                                return Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Search Bar
+                                    Container(
+                                      margin: const EdgeInsets.only(bottom: 20),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      border: InputBorder.none,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            vertical: 12,
+                                      child: TextField(
+                                        onChanged: (value) {
+                                          setDialogState(() {
+                                            tempSearchQuery = value;
+                                          });
+                                        },
+                                        decoration: InputDecoration(
+                                          hintText:
+                                              AppLocalizations.of(
+                                                context,
+                                              )!.searchCountryCode,
+                                          prefixIcon: const Icon(
+                                            Icons.search,
+                                            color: Colors.grey,
                                           ),
-                                      hintStyle: TextStyle(
-                                        color: Colors.grey.shade500,
-                                        fontSize: 14,
+                                          border: InputBorder.none,
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                vertical: 12,
+                                              ),
+                                          hintStyle: TextStyle(
+                                            color: Colors.grey.shade500,
+                                            fontSize: 14,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                    maxHeight:
-                                        MediaQuery.of(context).size.height *
-                                        0.4,
-                                  ),
-                                  child:
-                                      filteredCodes.isEmpty
-                                          ? const Center(
-                                            child: Padding(
-                                              padding: EdgeInsets.all(20.0),
-                                              child: Text(
-                                                'No country codes found',
-                                                style: TextStyle(
-                                                  color: Colors.grey,
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                          : ListView.separated(
-                                            shrinkWrap: true,
-                                            itemCount: filteredCodes.length,
-                                            separatorBuilder:
-                                                (context, index) =>
-                                                    const SizedBox(height: 16),
-                                            itemBuilder: (context, index) {
-                                              final code = filteredCodes[index];
-                                              final isSelected =
-                                                  tempSelectedCode ==
-                                                  code.countryCode;
-
-                                              return InkWell(
-                                                onTap: () {
-                                                  setDialogState(() {
-                                                    tempSelectedCode =
-                                                        code.countryCode;
-                                                  });
-                                                },
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                child: Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 16,
-                                                        vertical: 14,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.white,
-                                                    border: Border.all(
-                                                      color:
-                                                          Colors.grey.shade200,
-                                                      width: 1,
+                                    ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxHeight:
+                                            MediaQuery.of(context).size.height *
+                                            0.4,
+                                      ),
+                                      child:
+                                          filteredCodes.isEmpty
+                                              ? Center(
+                                                child: Padding(
+                                                  padding: EdgeInsets.all(20.0),
+                                                  child: Text(
+                                                    AppLocalizations.of(
+                                                      context,
+                                                    )!.noCountryCodesFound,
+                                                    style: TextStyle(
+                                                      color: Colors.grey,
+                                                      fontSize: 14,
                                                     ),
+                                                  ),
+                                                ),
+                                              )
+                                              : ListView.separated(
+                                                shrinkWrap: true,
+                                                itemCount: filteredCodes.length,
+                                                separatorBuilder:
+                                                    (context, index) =>
+                                                        const SizedBox(
+                                                          height: 16,
+                                                        ),
+                                                itemBuilder: (context, index) {
+                                                  final code =
+                                                      filteredCodes[index];
+                                                  final isSelected =
+                                                      tempSelectedCode ==
+                                                      code.countryCode;
+
+                                                  return InkWell(
+                                                    onTap: () {
+                                                      setDialogState(() {
+                                                        tempSelectedCode =
+                                                            code.countryCode;
+                                                      });
+                                                    },
                                                     borderRadius:
                                                         BorderRadius.circular(
                                                           10,
                                                         ),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: Colors.black
-                                                            .withOpacity(0.03),
-                                                        blurRadius: 10,
-                                                        offset: const Offset(
-                                                          0,
-                                                          4,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  child: Row(
-                                                    children: [
-                                                      Expanded(
-                                                        child: Text(
-                                                          code.countryCode,
-                                                          style:
-                                                              const TextStyle(
-                                                                fontSize: 16,
-                                                                color:
-                                                                    Colors
-                                                                        .black,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                      Container(
-                                                        width: 22,
-                                                        height: 22,
-                                                        decoration: BoxDecoration(
-                                                          shape:
-                                                              BoxShape.circle,
-                                                          border: Border.all(
-                                                            color:
-                                                                isSelected
-                                                                    ? const Color(
-                                                                      0xFF1B834F,
-                                                                    )
-                                                                    : Colors
-                                                                        .grey
-                                                                        .shade400,
-                                                            width: 1.5,
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 16,
+                                                            vertical: 14,
                                                           ),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white,
+                                                        border: Border.all(
+                                                          color:
+                                                              Colors
+                                                                  .grey
+                                                                  .shade200,
+                                                          width: 1,
                                                         ),
-                                                        child:
-                                                            isSelected
-                                                                ? Container(
-                                                                  margin:
-                                                                      const EdgeInsets.all(
-                                                                        3,
-                                                                      ),
-                                                                  decoration: const BoxDecoration(
-                                                                    color: Color(
-                                                                      0xFF1B834F,
-                                                                    ),
-                                                                    shape:
-                                                                        BoxShape
-                                                                            .circle,
-                                                                  ),
-                                                                )
-                                                                : null,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              10,
+                                                            ),
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: Colors.black
+                                                                .withOpacity(
+                                                                  0.03,
+                                                                ),
+                                                            blurRadius: 10,
+                                                            offset:
+                                                                const Offset(
+                                                                  0,
+                                                                  4,
+                                                                ),
+                                                          ),
+                                                        ],
                                                       ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              );
-                                            },
+                                                      child: Row(
+                                                        children: [
+                                                          Expanded(
+                                                            child: Row(
+                                                              children: [
+                                                                Text(
+                                                                  _getFlagForCode(
+                                                                    code.countryCode,
+                                                                  ),
+                                                                  style:
+                                                                      const TextStyle(
+                                                                        fontSize:
+                                                                            18,
+                                                                      ),
+                                                                ),
+                                                                const SizedBox(
+                                                                  width: 10,
+                                                                ),
+                                                                Text(
+                                                                  code.countryCode,
+                                                                  style: const TextStyle(
+                                                                    fontSize:
+                                                                        16,
+                                                                    color:
+                                                                        Colors
+                                                                            .black,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          Container(
+                                                            width: 22,
+                                                            height: 22,
+                                                            decoration: BoxDecoration(
+                                                              shape:
+                                                                  BoxShape
+                                                                      .circle,
+                                                              border: Border.all(
+                                                                color:
+                                                                    isSelected
+                                                                        ? const Color(
+                                                                          0xFF1B834F,
+                                                                        )
+                                                                        : Colors
+                                                                            .grey
+                                                                            .shade400,
+                                                                width: 1.5,
+                                                              ),
+                                                            ),
+                                                            child:
+                                                                isSelected
+                                                                    ? Container(
+                                                                      margin:
+                                                                          const EdgeInsets.all(
+                                                                            3,
+                                                                          ),
+                                                                      decoration: const BoxDecoration(
+                                                                        color: Color(
+                                                                          0xFF1B834F,
+                                                                        ),
+                                                                        shape:
+                                                                            BoxShape.circle,
+                                                                      ),
+                                                                    )
+                                                                    : null,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                    ),
+                                    const SizedBox(height: 32),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _selectedCountryCode =
+                                                tempSelectedCode;
+                                            _selectedFlag = _getFlagForCode(
+                                              _selectedCountryCode,
+                                            );
+                                          });
+                                          Navigator.pop(context);
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(
+                                            0xFF1B834F,
                                           ),
-                                ),
-                                const SizedBox(height: 32),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _selectedCountryCode = tempSelectedCode;
-                                      });
-                                      Navigator.pop(context);
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF1B834F),
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 16,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      elevation: 0,
-                                    ),
-                                    child: const Text(
-                                      'Continue',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 16,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          elevation: 0,
+                                        ),
+                                        child: Text(
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.continue_,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                  ],
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               // Circular X close button
@@ -566,10 +657,10 @@ class _RegisterPhoneInputScreenState extends State<RegisterPhoneInputScreen> {
                               ),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Center(
+                            child: Center(
                               child: Text(
-                                '🇲🇷',
-                                style: TextStyle(fontSize: 24),
+                                _selectedFlag,
+                                style: const TextStyle(fontSize: 24),
                               ),
                             ),
                           ),

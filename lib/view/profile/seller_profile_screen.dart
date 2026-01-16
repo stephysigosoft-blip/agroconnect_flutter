@@ -2,149 +2,219 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../models/product.dart';
 import '../../controllers/product_controller.dart';
+import '../../l10n/app_localizations.dart';
 
 class SellerProfileScreen extends StatelessWidget {
   const SellerProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // For demo/static purposes, we'll use sample data or passed arguments
-    // In a real app, you might fetch this based on a seller ID
-    final String sellerName = "Mohamed Ould Salem";
-    final int publishedAds = 10;
-    final String avatarPath = 'lib/assets/images/about farmer iamge.png';
+    final l10n = AppLocalizations.of(context)!;
+    // Retrieve product from arguments
+    // Retrieve product from arguments
+    final Product? productArg = Get.arguments as Product?;
+
+    final String sellerName =
+        (productArg?.sellerName.isNotEmpty ?? false)
+            ? productArg!.sellerName
+            : "Unknown";
+    final String avatarPath =
+        (productArg?.sellerImage.isNotEmpty ?? false)
+            ? productArg!.sellerImage
+            : 'lib/assets/images/farmer image.png';
+    final String sellerId = productArg?.sellerId ?? '';
 
     final ProductController controller = Get.find<ProductController>();
-    final List<Product> activeAds = controller.allProducts; // Sample data
-    final List<Product> soldAds =
-        controller.allProducts.take(2).toList(); // Sample data
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
+    // Trigger fetch for seller ads
+    if (sellerId.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.fetchSellerAds(sellerId);
+      });
+    }
+
+    return Obx(() {
+      // Filter ads by sellerId from the dedicated sellerAds list
+      final List<Product> sellerProducts = controller.sellerAds;
+
+      final List<Product> activeAds =
+          sellerProducts
+              .where((p) => p.status == 'active' && p.availableQuantityKg > 0)
+              .toList();
+      final List<Product> soldAds =
+          sellerProducts.where((p) => p.status == 'sold').toList();
+
+      final int publishedAds = activeAds.length + soldAds.length;
+
+      return DefaultTabController(
+        length: 2,
+        child: Scaffold(
           backgroundColor: Colors.white,
-          elevation: 0,
-          surfaceTintColor: Colors.white,
-          centerTitle: true,
-          leading: Center(
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              child: Container(
-                width: 35,
-                height: 35,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1B834F),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: const Icon(
-                  Icons.chevron_left,
-                  color: Colors.white,
-                  size: 28,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            surfaceTintColor: Colors.white,
+            centerTitle: true,
+            leading: Center(
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  width: 35,
+                  height: 35,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1B834F),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.chevron_left,
+                    color: Colors.white,
+                    size: 28,
+                  ),
                 ),
               ),
             ),
-          ),
-          title: const Text(
-            'Profile',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.black,
+            title: Text(
+              l10n.profile,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
             ),
           ),
-          // bottom: PreferredSize(
-          //   preferredSize: const Size.fromHeight(1.0),
-          //   child: Container(color: Colors.grey.shade300, height: 1.0),
-          // ),
-        ),
-        body: Column(
-          children: [
-            const SizedBox(height: 16),
-            // Profile Card
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                // padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
-                        avatarPath,
-                        width: 60,
-                        height: 65,
-                        fit: BoxFit.cover,
+          body: Column(
+            children: [
+              const SizedBox(height: 16),
+              // Profile Card
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          sellerName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child:
+                            avatarPath.startsWith('http')
+                                ? Image.network(
+                                  avatarPath,
+                                  width: 60,
+                                  height: 65,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (
+                                        context,
+                                        error,
+                                        stackTrace,
+                                      ) => Image.asset(
+                                        'lib/assets/images/farmer image.png',
+                                        width: 60,
+                                        height: 65,
+                                        fit: BoxFit.cover,
+                                      ),
+                                )
+                                : Image.asset(
+                                  avatarPath,
+                                  width: 60,
+                                  height: 65,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (context, error, stackTrace) => Container(
+                                        width: 60,
+                                        height: 65,
+                                        color: Colors.grey.shade200,
+                                        child: const Icon(
+                                          Icons.person,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              sellerName,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              l10n.publishedAds(publishedAds),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF1B834F),
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$publishedAds Published Ads',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF1B834F),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            // Custom TabBar
-            const TabBar(
-              indicatorColor: Color(0xFF1B834F),
-              indicatorWeight: 3,
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: Colors.black,
-              unselectedLabelColor: Colors.black54,
-              labelStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-              tabs: [Tab(text: 'Active Ads'), Tab(text: 'Sold')],
-            ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _buildProductGrid(activeAds),
-                  _buildProductGrid(soldAds),
-                ],
-              ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              if (controller.isFetchingSellerAds.value &&
+                  sellerProducts.isEmpty)
+                const Expanded(
+                  child: Center(
+                    child: CircularProgressIndicator(color: Color(0xFF1B834F)),
+                  ),
+                )
+              else ...[
+                // Custom TabBar
+                TabBar(
+                  indicatorColor: Color(0xFF1B834F),
+                  indicatorWeight: 3,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelColor: Colors.black,
+                  unselectedLabelColor: Colors.black54,
+                  labelStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  tabs: [Tab(text: l10n.activeAds), Tab(text: l10n.sold)],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildProductGrid(context, activeAds),
+                      _buildProductGrid(context, soldAds),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
-  Widget _buildProductGrid(List<Product> products) {
+  Widget _buildProductGrid(BuildContext context, List<Product> products) {
     if (products.isEmpty) {
-      return const Center(child: Text("No ads found"));
+      return Center(child: Text(AppLocalizations.of(context)!.noProductsFound));
     }
     return GridView.builder(
       padding: const EdgeInsets.all(12),
@@ -184,12 +254,26 @@ class SellerProfileScreen extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(12),
               ),
-              child: Image.asset(
-                product.imagePath,
-                height: 130,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
+              child:
+                  product.imagePath.startsWith('http')
+                      ? Image.network(
+                        product.imagePath,
+                        height: 130,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (context, error, stackTrace) =>
+                                _buildErrorPlaceholder(),
+                      )
+                      : Image.asset(
+                        product.imagePath,
+                        height: 130,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (context, error, stackTrace) =>
+                                _buildErrorPlaceholder(),
+                      ),
             ),
             Padding(
               padding: const EdgeInsets.all(10),
@@ -263,6 +347,17 @@ class SellerProfileScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorPlaceholder() {
+    return Container(
+      color: Colors.grey.shade100,
+      child: const Icon(
+        Icons.image_not_supported,
+        size: 40,
+        color: Colors.grey,
       ),
     );
   }

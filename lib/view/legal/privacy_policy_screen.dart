@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 import 'package:flutter_html/flutter_html.dart';
 import '../../services/api_service.dart';
 
@@ -48,8 +49,8 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
             ),
           ),
         ),
-        title: const Text(
-          'Privacy Policy',
+        title: Text(
+          AppLocalizations.of(context)!.privacyPolicy,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,

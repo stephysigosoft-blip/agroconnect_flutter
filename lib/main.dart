@@ -37,8 +37,10 @@ import 'view/my_ads/my_ads_screen.dart';
 import 'view/my_ads/ad_details_seller_screen.dart';
 import 'view/my_ads/edit_item_screen.dart';
 import 'view/my_ads/ad_reposted_success_screen.dart';
+import 'view/kyc/kyc_verification_screen.dart';
 import 'utils/localization_helper.dart';
 import 'services/api_service.dart';
+import 'models/product.dart';
 // Localizely config - To be used when implementing Localizely (see LOCALIZELY_SETUP.md)
 // import 'config/localizely_config.dart';
 
@@ -83,6 +85,7 @@ class _MyAppState extends State<MyApp> {
     setState(() {
       _locale = locale;
     });
+    Get.updateLocale(locale);
 
     // Save language preference
     final languageCode = LocalizationHelper.getLanguageCodeFromLocale(locale);
@@ -100,6 +103,15 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
+        dialogBackgroundColor: Colors.white,
+        dialogTheme: const DialogThemeData(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+        ),
+        popupMenuTheme: const PopupMenuThemeData(
+          color: Colors.white,
+          surfaceTintColor: Colors.white,
+        ),
       ),
       locale: _locale,
       localizationsDelegates: const [
@@ -178,7 +190,10 @@ class _MyAppState extends State<MyApp> {
           name: '/adDetailsSeller',
           page: () => const AdDetailsSellerScreen(),
         ),
-        GetPage(name: '/editItem', page: () => const EditItemScreen()),
+        GetPage(
+          name: '/editItem',
+          page: () => EditItemScreen(product: Get.arguments as Product),
+        ),
         GetPage(
           name: '/adRepostedSuccess',
           page: () => const AdRepostedSuccessScreen(),
@@ -188,6 +203,10 @@ class _MyAppState extends State<MyApp> {
           page: () => const RegisterPhoneInputScreen(),
         ),
         GetPage(name: '/wishlist', page: () => const WishlistScreen()),
+        GetPage(
+          name: '/kycVerification',
+          page: () => const KycVerificationScreen(),
+        ),
         GetPage(
           name: '/register/otp',
           page: () {

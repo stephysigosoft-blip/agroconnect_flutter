@@ -64,14 +64,14 @@ class WishlistScreen extends StatelessWidget {
       ),
       body: Obx(() {
         if (controller.wishlistItems.isEmpty) {
-          return _buildEmptyState();
+          return _buildEmptyState(l10n);
         }
-        return _buildWishlistGrid(controller, l10n);
+        return _buildWishlistGrid(context, controller, l10n);
       }),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(AppLocalizations l10n) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -79,12 +79,12 @@ class WishlistScreen extends StatelessWidget {
           Icon(Icons.favorite_border, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
-            'No items in wishlist',
+            l10n.noItemsInWishlist,
             style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
-            'Add products to your wishlist to save them for later',
+            l10n.noItemsInWishlistDesc,
             style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
             textAlign: TextAlign.center,
           ),
@@ -94,28 +94,62 @@ class WishlistScreen extends StatelessWidget {
   }
 
   Widget _buildWishlistGrid(
+    BuildContext context,
     WishlistController controller,
     AppLocalizations l10n,
   ) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.54, // Reverted to accommodate outside buttons
-        ),
-        itemCount: controller.wishlistItems.length,
-        itemBuilder: (context, index) {
-          final product = controller.wishlistItems[index];
-          return _buildWishlistCard(product, controller, l10n);
+      child: RefreshIndicator(
+        onRefresh: () async {
+          await controller.fetchWishlist();
         },
+        color: const Color(0xFF1B834F),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (ScrollNotification scrollInfo) {
+            if (scrollInfo.metrics.pixels >=
+                scrollInfo.metrics.maxScrollExtent * 0.8) {
+              if (controller.hasMore.value && !controller.isLoadingMore.value) {
+                controller.fetchWishlist(loadMore: true);
+              }
+            }
+            return false;
+          },
+          child: GridView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 0.54, // Reverted to accommodate outside buttons
+            ),
+            itemCount:
+                controller.wishlistItems.length +
+                (controller.isLoadingMore.value ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == controller.wishlistItems.length) {
+                return const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF1B834F),
+                      strokeWidth: 2,
+                    ),
+                  ),
+                );
+              }
+              final product = controller.wishlistItems[index];
+              return _buildWishlistCard(context, product, controller, l10n);
+            },
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildWishlistCard(
+    BuildContext context,
     Product product,
     WishlistController controller,
     AppLocalizations l10n,
@@ -131,7 +165,12 @@ class WishlistScreen extends StatelessWidget {
           children: [
             // Delete Button
             GestureDetector(
-              onTap: () => _showDeleteConfirmationDialog(product, controller),
+              onTap:
+                  () => _showDeleteConfirmationDialog(
+                    context,
+                    product,
+                    controller,
+                  ),
               child: Container(
                 width: 32,
                 height: 32,
@@ -151,11 +190,14 @@ class WishlistScreen extends StatelessWidget {
             // Make a Deal Button
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _showMakeOfferDialog(product),
+                onPressed: () => _showMakeOfferDialog(product, l10n),
                 icon: const Icon(Icons.chat_bubble_outline, size: 14),
-                label: const Text(
-                  'Make a Deal',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                label: Text(
+                  l10n.makeADeal,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 style: OutlinedButton.styleFrom(
                   backgroundColor: Colors.white,
@@ -176,9 +218,11 @@ class WishlistScreen extends StatelessWidget {
   }
 
   void _showDeleteConfirmationDialog(
+    BuildContext context,
     Product product,
     WishlistController controller,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
@@ -190,9 +234,9 @@ class WishlistScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 8),
-              const Text(
-                'Remove from Wishlist',
-                style: TextStyle(
+              Text(
+                l10n.removeFromWishlist,
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -200,9 +244,9 @@ class WishlistScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Are you sure to delete this product from wishlist?',
-                style: TextStyle(
+              Text(
+                l10n.removeFromWishlistConfirmation,
+                style: const TextStyle(
                   fontSize: 14,
                   color: Colors.black54,
                   height: 1.4,
@@ -222,9 +266,9 @@ class WishlistScreen extends StatelessWidget {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
+                      child: Text(
+                        l10n.cancel,
+                        style: const TextStyle(
                           color: Color(0xFF1B834F),
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
@@ -248,9 +292,9 @@ class WishlistScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'Remove',
-                        style: TextStyle(
+                      child: Text(
+                        l10n.remove,
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
@@ -267,7 +311,7 @@ class WishlistScreen extends StatelessWidget {
     );
   }
 
-  void _showMakeOfferDialog(Product product) {
+  void _showMakeOfferDialog(Product product, AppLocalizations l10n) {
     final quantityController = TextEditingController();
     final noteController = TextEditingController();
 
@@ -281,16 +325,22 @@ class WishlistScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Center(
+              Center(
                 child: Text(
-                  'Make an Offer',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  l10n.makeAnOffer,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Quantity (Kg)',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              Text(
+                l10n.quantityKg,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -314,9 +364,12 @@ class WishlistScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
-                'Your Offer Price (MRU)',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+              Text(
+                l10n.yourOfferPrice,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 10),
               TextField(
@@ -353,9 +406,9 @@ class WishlistScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(24),
                         ),
                       ),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
+                      child: Text(
+                        l10n.cancel,
+                        style: const TextStyle(
                           color: const Color(0xFF1B834F),
                           fontWeight: FontWeight.w600,
                         ),
@@ -367,7 +420,39 @@ class WishlistScreen extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () {
                         final qty = quantityController.text.trim();
+                        final price = noteController.text.trim();
+
                         if (qty.isEmpty) {
+                          Get.snackbar(
+                            l10n.required,
+                            l10n.pleaseEnterQuantity,
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.redAccent,
+                            colorText: Colors.white,
+                          );
+                          return;
+                        }
+                        if (double.tryParse(qty) == null ||
+                            double.parse(qty) <= 0) {
+                          Get.snackbar(
+                            l10n.invalidInput,
+                            l10n.validNumericQuantity,
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.redAccent,
+                            colorText: Colors.white,
+                          );
+                          return;
+                        }
+                        if (price.isNotEmpty &&
+                            (double.tryParse(price) == null ||
+                                double.parse(price) <= 0)) {
+                          Get.snackbar(
+                            l10n.invalidInput,
+                            l10n.validNumericPrice,
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.redAccent,
+                            colorText: Colors.white,
+                          );
                           return;
                         }
                         final chatController = Get.put(ChatController());
@@ -385,9 +470,9 @@ class WishlistScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(24),
                         ),
                       ),
-                      child: const Text(
-                        'Send Offer',
-                        style: TextStyle(
+                      child: Text(
+                        l10n.sendOffer,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
                         ),

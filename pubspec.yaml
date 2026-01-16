@@ -38,6 +38,7 @@ dependencies:
   image_picker: ^1.0.7
   localizely_sdk: ^2.6.4
   persistent_bottom_nav_bar: ^6.2.1
+  pusher_channels_flutter: ^2.6.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -45,8 +46,11 @@ dependencies:
   pdf: ^3.11.3
   path_provider: ^2.1.5
   dio: ^5.9.0
+  http: ^1.2.0
   flutter_html: ^3.0.0
   url_launcher: ^6.3.0
+  image_cropper: ^11.0.0
+  country_picker: ^2.0.27
 
 dev_dependencies:
   flutter_test:
@@ -75,6 +79,7 @@ flutter:
   assets:
     - lib/assets/images/logo.png
     - lib/assets/images/about farmer iamge.png
+    - lib/assets/images/farmer image.png
     - lib/assets/images/plant.png
     - lib/assets/images/categories/
     - lib/assets/images/product's/

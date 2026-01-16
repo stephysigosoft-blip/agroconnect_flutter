@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 
 import '../../services/api_service.dart';
 
@@ -67,8 +68,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             ),
           ),
         ),
-        title: const Text(
-          'Help & Support',
+        title: Text(
+          AppLocalizations.of(context)!.helpSupport,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -83,7 +84,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Call us',
+              AppLocalizations.of(context)!.callUs,
               style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 8),
@@ -97,7 +98,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Email us',
+              AppLocalizations.of(context)!.emailUs,
               style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 8),

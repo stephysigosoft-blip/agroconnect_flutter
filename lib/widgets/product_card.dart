@@ -54,7 +54,7 @@ class ProductCard extends StatelessWidget {
                   ),
                 ),
               ),
-            if (showStatus && status != null) _buildStatusBadge(status!),
+            if (showStatus && status != null) _buildStatusBadge(status!, l10n),
             if (showWishlist) _buildWishlistButton(wishlistController),
             if (topTrailing != null)
               Positioned(top: 8, right: 8, child: topTrailing!),
@@ -161,28 +161,33 @@ class ProductCard extends StatelessWidget {
             ),
           ],
         ),
-        child: cardContent,
+        child: SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          child: cardContent,
+        ),
       ),
     );
   }
 
   Widget _buildImage(bool grayscale, bool haze) {
-    Widget image = Image.asset(
-      product.imagePath,
-      height: 120,
-      width: double.infinity,
-      fit: BoxFit.cover,
-      errorBuilder:
-          (context, error, stackTrace) => Container(
-            height: 120,
-            color: Colors.grey.shade100,
-            child: const Icon(
-              Icons.image_not_supported,
-              size: 40,
-              color: Colors.grey,
-            ),
-          ),
-    );
+    final bool isNetworkImage = product.imagePath.startsWith('http');
+
+    Widget image =
+        isNetworkImage
+            ? Image.network(
+              product.imagePath,
+              height: 120,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
+            )
+            : Image.asset(
+              product.imagePath,
+              height: 120,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => _buildErrorImage(),
+            );
 
     if (grayscale || haze) {
       image = ColorFiltered(
@@ -218,12 +223,37 @@ class ProductCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge(String statusText) {
+  Widget _buildErrorImage() {
+    return Container(
+      height: 120,
+      width: double.infinity,
+      color: Colors.grey.shade100,
+      child: const Icon(
+        Icons.image_not_supported,
+        size: 40,
+        color: Colors.grey,
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String statusText, AppLocalizations l10n) {
     Color badgeColor = const Color(0xFF1B834F);
-    if (statusText.toLowerCase() == 'rejected') {
+    String displayStatus = statusText.capitalizeFirst!;
+
+    final lowerStatus = statusText.toLowerCase();
+
+    if (lowerStatus == 'active') {
+      displayStatus = l10n.active;
+      badgeColor = const Color(0xFF1B834F);
+    } else if (lowerStatus == 'sold') {
+      displayStatus = l10n.sold;
+      badgeColor = const Color(0xFF1B834F);
+    } else if (lowerStatus == 'rejected') {
+      displayStatus = l10n.rejected;
       badgeColor = const Color(0xFFD32F2F);
-    } else if (statusText.toLowerCase() == 'expired' ||
-        statusText.toLowerCase() == 'deactivated') {
+    } else if (lowerStatus == 'expired' || lowerStatus == 'deactivated') {
+      displayStatus =
+          lowerStatus == 'expired' ? l10n.expired : l10n.deactivated;
       badgeColor = const Color(0xFF6E6E6E);
     }
 
@@ -240,7 +270,7 @@ class ProductCard extends StatelessWidget {
           ),
         ),
         child: Text(
-          statusText,
+          displayStatus,
           style: const TextStyle(
             color: Colors.white,
             fontSize: 10,

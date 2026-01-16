@@ -1,77 +1,110 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
+import '../../controllers/notification_controller.dart';
 
-class NotificationsScreen extends StatelessWidget {
+import '../../widgets/common/common_app_bar.dart';
+import '../../widgets/common/common_back_button.dart';
+import '../../utils/app_colors.dart';
+
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  final ScrollController _scrollController = ScrollController();
+  final NotificationController _controller = Get.put(NotificationController());
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _controller.fetchNotifications(loadMore: true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
+      appBar: CommonAppBar(
+        title: AppLocalizations.of(context)!.notification,
         surfaceTintColor: Colors.white,
-        automaticallyImplyLeading: false,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16.0),
-          child: Center(
-            child: GestureDetector(
-              onTap: () => Get.back(),
-              child: Container(
-                width: 35,
-                height: 35,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1B834F),
-                  borderRadius: BorderRadius.circular(12),
+        leading: const Padding(
+          padding: EdgeInsets.only(left: 16.0),
+          child: Center(child: CommonBackButton()),
+        ),
+      ),
+      body: Obx(() {
+        if (_controller.isLoading.value && _controller.notifications.isEmpty) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
+
+        if (_controller.notifications.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.notifications_off_outlined,
+                  size: 64,
+                  color: Colors.grey.shade300,
                 ),
-                child: const Icon(
-                  Icons.chevron_left,
-                  color: Colors.white,
-                  size: 28,
+                const SizedBox(height: 16),
+                Text(
+                  'No notifications yet',
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
                 ),
-              ),
+              ],
             ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () => _controller.fetchNotifications(),
+          color: AppColors.primary,
+          child: ListView.separated(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(20),
+            itemCount:
+                _controller.notifications.length +
+                (_controller.isLoading.value ? 1 : 0),
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              if (index == _controller.notifications.length) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                );
+              }
+              final notification = _controller.notifications[index];
+              return _buildNotificationCard(
+                message: notification.message,
+                time: notification.time,
+              );
+            },
           ),
-        ),
-        title: const Text(
-          'Notifications',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildNotificationCard(
-            message:
-                'Suspendisse urna metus, porttitor nec lacinia in, fermentum eu nisl. Ut imperdiet mattis justo.',
-            time: '10:00 AM',
-          ),
-          const SizedBox(height: 16),
-          _buildNotificationCard(
-            message:
-                'Suspendisse urna metus, porttitor nec lacinia in, fermentum eu nisl. Ut imperdiet mattis justo.',
-            time: '10:00 AM',
-          ),
-          const SizedBox(height: 16),
-          _buildNotificationCard(
-            message:
-                'Suspendisse urna metus, porttitor nec lacinia in, fermentum eu nisl. Ut imperdiet mattis justo.',
-            time: '10:00 AM',
-          ),
-          const SizedBox(height: 16),
-          _buildNotificationCard(
-            message:
-                'Suspendisse urna metus, porttitor nec lacinia in, fermentum eu nisl. Ut imperdiet mattis justo.',
-            time: '10:00 AM',
-          ),
-        ],
-      ),
+        );
+      }),
     );
   }
 
