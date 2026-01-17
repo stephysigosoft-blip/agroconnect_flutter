@@ -556,6 +556,12 @@ abstract class AppLocalizations {
   /// **'Pay Now'**
   String get payNow;
 
+  /// No description provided for @orderNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Now'**
+  String get orderNow;
+
   /// No description provided for @paymentRules.
   ///
   /// In en, this message translates to:
@@ -970,6 +976,12 @@ abstract class AppLocalizations {
   /// **'No'**
   String get no;
 
+  /// No description provided for @yes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get yes;
+
   /// No description provided for @search.
   ///
   /// In en, this message translates to:
@@ -993,6 +1005,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete Chat'**
   String get deleteChat;
+
+  /// No description provided for @chatReportedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This chat has been reported. You cannot send messages.'**
+  String get chatReportedMessage;
 
   /// No description provided for @whatsAppNumberRequired.
   ///
@@ -1821,6 +1839,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connection Error: Please stop the app and \"Run\" again to link the new social media plugin correctly. \nDetails: {details}'**
   String connectionError(String details);
+
+  /// No description provided for @selectPaymentMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Payment Method'**
+  String get selectPaymentMethod;
+
+  /// No description provided for @cashOnDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash on Delivery'**
+  String get cashOnDelivery;
+
+  /// No description provided for @placeOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Place Order'**
+  String get placeOrder;
+
+  /// No description provided for @confirmOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Order'**
+  String get confirmOrder;
+
+  /// No description provided for @confirmOrderMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to place this order?'**
+  String get confirmOrderMessage;
+
+  /// No description provided for @orderPlacedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Order placed successfully'**
+  String get orderPlacedSuccessfully;
+
+  /// No description provided for @orderCheckout.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Checkout'**
+  String get orderCheckout;
 }
 
 class _AppLocalizationsDelegate

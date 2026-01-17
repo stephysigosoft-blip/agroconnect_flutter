@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' as get_pkg;
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/country_code.dart';
 import '../models/send_otp_response.dart';
@@ -630,6 +631,33 @@ class ApiService extends get_pkg.GetxService {
     }
   }
 
+  Future<Map<String, dynamic>?> reportChat(
+    String chatConversationId,
+    String reason,
+  ) async {
+    try {
+      final params = {
+        'chat_conversation_id': chatConversationId,
+        'reason': reason,
+      };
+      _logApiCall('reportChat', params: params);
+
+      final options = await _getAuthOptions();
+      final formData = FormData.fromMap(params);
+
+      final response = await _dio.post(
+        ApiConstants.reportChat,
+        data: formData,
+        options: options,
+      );
+      _logSuccess('reportChat', response.statusCode, response.data);
+      return response.data;
+    } catch (e) {
+      _logError('reportChat', e);
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> reportAd(FormData formData) async {
     try {
       _logApiCall('reportAd');
@@ -1039,6 +1067,171 @@ class ApiService extends get_pkg.GetxService {
     return Options(
       headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );
+  }
+
+  Future<Map<String, dynamic>?> completePayment(String orderId) async {
+    try {
+      final params = {'order_id': orderId};
+      _logApiCall('completePayment', params: params);
+      final options = await _getAuthOptions();
+      final formData = FormData.fromMap(params);
+      final response = await _dio.post(
+        ApiConstants.completePayment,
+        data: formData,
+        options: options,
+      );
+      _logSuccess('completePayment', response.statusCode, response.data);
+      return response.data;
+    } catch (e) {
+      _logError('completePayment', e);
+      if (e is DioException && e.response != null) {
+        return e.response?.data;
+      }
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> disputeOrder({
+    required String orderId,
+    required String reason,
+    required String message,
+    List<XFile>? images,
+  }) async {
+    try {
+      final Map<String, dynamic> params = {
+        'order_id': orderId,
+        'reason': reason,
+        'message': message,
+      };
+
+      if (images != null && images.isNotEmpty) {
+        final List<MultipartFile> multipartImages = [];
+        for (var i = 0; i < images.length; i++) {
+          multipartImages.add(
+            await MultipartFile.fromFile(
+              images[i].path,
+              filename: 'dispute_image_$i.jpg',
+            ),
+          );
+        }
+        params['images[]'] = multipartImages;
+      }
+
+      _logApiCall('disputeOrder', params: params);
+      final options = await _getAuthOptions();
+      final formData = FormData.fromMap(params);
+      final response = await _dio.post(
+        ApiConstants.disputeOrder,
+        data: formData,
+        options: options,
+      );
+      _logSuccess('disputeOrder', response.statusCode, response.data);
+      return response.data;
+    } catch (e) {
+      _logError('disputeOrder', e);
+      if (e is DioException && e.response != null) {
+        return e.response?.data;
+      }
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> markAsReceived({
+    required String orderId,
+    List<XFile>? images,
+  }) async {
+    try {
+      final Map<String, dynamic> params = {'order_id': orderId};
+
+      if (images != null && images.isNotEmpty) {
+        final List<MultipartFile> multipartImages = [];
+        for (var i = 0; i < images.length; i++) {
+          multipartImages.add(
+            await MultipartFile.fromFile(
+              images[i].path,
+              filename: 'proof_image_$i.jpg',
+            ),
+          );
+        }
+        params['images[]'] = multipartImages;
+      }
+
+      _logApiCall('markAsReceived', params: params);
+      final options = await _getAuthOptions();
+      final formData = FormData.fromMap(params);
+      final response = await _dio.post(
+        ApiConstants.markAsReceived,
+        data: formData,
+        options: options,
+      );
+      _logSuccess('markAsReceived', response.statusCode, response.data);
+      return response.data;
+    } catch (e) {
+      _logError('markAsReceived', e);
+      if (e is DioException && e.response != null) {
+        return e.response?.data;
+      }
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> dispatchOrder({
+    required String orderId,
+    List<XFile>? images,
+  }) async {
+    try {
+      final Map<String, dynamic> params = {'order_id': orderId};
+
+      if (images != null && images.isNotEmpty) {
+        final List<MultipartFile> multipartImages = [];
+        for (var i = 0; i < images.length; i++) {
+          multipartImages.add(
+            await MultipartFile.fromFile(
+              images[i].path,
+              filename: 'dispatch_proof_$i.jpg',
+            ),
+          );
+        }
+        params['delivery_proof_image'] =
+            multipartImages.length == 1 ? multipartImages[0] : multipartImages;
+      }
+
+      _logApiCall('dispatchOrder', params: params);
+      final options = await _getAuthOptions();
+      final formData = FormData.fromMap(params);
+      final response = await _dio.post(
+        ApiConstants.dispatchOrder,
+        data: formData,
+        options: options,
+      );
+      _logSuccess('dispatchOrder', response.statusCode, response.data);
+      return response.data;
+    } catch (e) {
+      _logError('dispatchOrder', e);
+      if (e is DioException && e.response != null) {
+        return e.response?.data;
+      }
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getViewInvoice(String orderId) async {
+    try {
+      _logApiCall('getViewInvoice', params: {'order_id': orderId});
+      final options = await _getAuthOptions();
+      final response = await _dio.get(
+        '${ApiConstants.viewInvoice}?order_id=$orderId',
+        options: options,
+      );
+      _logSuccess('getViewInvoice', response.statusCode, response.data);
+      if (response.data is Map<String, dynamic>) {
+        return response.data;
+      }
+      return {'data': response.data.toString()};
+    } catch (e) {
+      _logError('getViewInvoice', e);
+      return null;
+    }
   }
 
   SendOtpResponse _errorResponse() {

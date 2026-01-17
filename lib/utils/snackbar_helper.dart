@@ -10,11 +10,11 @@ class SnackBarHelper {
       title,
       message,
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: successColor.withOpacity(0.9),
+      backgroundColor: successColor,
       colorText: Colors.white,
       margin: const EdgeInsets.all(16),
       borderRadius: 12,
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 2),
     );
   }
 
@@ -23,11 +23,11 @@ class SnackBarHelper {
       title,
       message,
       snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: errorColor.withOpacity(0.9),
+      backgroundColor: errorColor,
       colorText: Colors.white,
       margin: const EdgeInsets.all(16),
       borderRadius: 12,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 2),
     );
   }
 }

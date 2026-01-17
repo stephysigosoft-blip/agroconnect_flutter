@@ -1,7 +1,10 @@
+import 'dart:io';
+import 'package:agroconnect_flutter/controllers/orders_controller.dart';
 import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../utils/snackbar_helper.dart';
 
 class DisputeScreen extends StatefulWidget {
   final String orderId;
@@ -16,14 +19,25 @@ class _DisputeScreenState extends State<DisputeScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   String? _selectedReason;
+  final List<XFile> _selectedFiles = [];
 
   Future<void> _pickImage() async {
     try {
-      await _picker.pickImage(source: ImageSource.gallery);
-      // Logic to store/display picked image could go here
+      final List<XFile> pickedFiles = await _picker.pickMultiImage();
+      if (pickedFiles.isNotEmpty) {
+        setState(() {
+          _selectedFiles.addAll(pickedFiles);
+        });
+      }
     } catch (e) {
       debugPrint('Error picking image: $e');
     }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _selectedFiles.removeAt(index);
+    });
   }
 
   @override
@@ -33,6 +47,7 @@ class _DisputeScreenState extends State<DisputeScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         elevation: 0,
         leading: Center(
           child: GestureDetector(
@@ -83,6 +98,7 @@ class _DisputeScreenState extends State<DisputeScreen> {
                   value: _selectedReason,
                   hint: Text(l10n.selectReason),
                   isExpanded: true,
+                  dropdownColor: Colors.white,
                   icon: const Icon(Icons.keyboard_arrow_down),
                   items:
                       [
@@ -114,7 +130,7 @@ class _DisputeScreenState extends State<DisputeScreen> {
               onTap: _pickImage,
               child: Container(
                 width: double.infinity,
-                height: 150,
+                height: 100,
                 decoration: BoxDecoration(
                   border: Border.all(
                     color: Colors.grey.shade300,
@@ -129,13 +145,18 @@ class _DisputeScreenState extends State<DisputeScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.image, color: Color(0xFF1B834F), size: 40),
-                        SizedBox(height: 8),
+                        const Icon(
+                          Icons.image,
+                          color: Color(0xFF1B834F),
+                          size: 30,
+                        ),
+                        const SizedBox(height: 4),
                         Text(
                           l10n.uploadImages,
                           style: const TextStyle(
                             color: Colors.black87,
                             fontWeight: FontWeight.w500,
+                            fontSize: 13,
                           ),
                         ),
                       ],
@@ -144,6 +165,52 @@ class _DisputeScreenState extends State<DisputeScreen> {
                 ),
               ),
             ),
+            if (_selectedFiles.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 80,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _selectedFiles.length,
+                  separatorBuilder:
+                      (context, index) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    return Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            File(_selectedFiles[index].path),
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => _removeImage(index),
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             Text(
               l10n.messageHint, // Using "Message" as label? I used messageHint which is "Message....". Wait, I should use "Message" label. "messageHint" is hintText. I should add "message" key if not exists. I'll use "messageHint" if appropriate or "l10n.details" or just "Message". I'll check keys. I'll use "l10n.describeIssue" for label? No, label is "Message". I'll use "l10n.messageHint" (Message....) and trim dots or just use new key. I'll stick to "Message" static if missing or "l10n.describeIssue" as both? No. I'll check if I have "message". I don't think so. I'll use "l10n.describeIssue" for hint. Label I'll use "l10n.notes" (Notes)? No. I'll use static 'Message' unless I want to add key. I'll add key "messageLabel": "Message" next time. For now I'll use "l10n.describeIssue" for HINT.
@@ -197,50 +264,61 @@ class _DisputeScreenState extends State<DisputeScreen> {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (_selectedReason == null || _selectedReason!.isEmpty) {
-                        Get.snackbar(
-                          l10n.required,
-                          l10n.pleaseSelectReason,
-                          backgroundColor: Colors.redAccent,
-                          colorText: Colors.white,
-                        );
-                        return;
-                      }
-                      if (_messageController.text.trim().isEmpty) {
-                        Get.snackbar(
-                          l10n.required,
-                          l10n.pleaseProvideDescription,
-                          backgroundColor: Colors.redAccent,
-                          colorText: Colors.white,
-                        );
-                        return;
-                      }
-                      // Submit dispute logic
-                      Get.back();
-                      Get.snackbar(
-                        l10n.disputeSubmitted,
-                        l10n.reviewRequestShortly,
+                  child: Obx(() {
+                    final ordersController = Get.find<OrdersController>();
+                    return ElevatedButton(
+                      onPressed:
+                          ordersController.isLoading.value
+                              ? null
+                              : () {
+                                if (_selectedReason == null ||
+                                    _selectedReason!.isEmpty) {
+                                  SnackBarHelper.showError(
+                                    l10n.required,
+                                    l10n.pleaseSelectReason,
+                                  );
+                                  return;
+                                }
+                                if (_messageController.text.trim().isEmpty) {
+                                  SnackBarHelper.showError(
+                                    l10n.required,
+                                    l10n.pleaseProvideDescription,
+                                  );
+                                  return;
+                                }
+                                ordersController.submitDispute(
+                                  orderId: widget.orderId,
+                                  reason: _selectedReason!,
+                                  message: _messageController.text.trim(),
+                                  images: _selectedFiles,
+                                );
+                              },
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1B834F),
-                        colorText: Colors.white,
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1B834F),
-                      minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      l10n.submit,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                      child:
+                          ordersController.isLoading.value
+                              ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : Text(
+                                l10n.submit,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                    );
+                  }),
                 ),
               ],
             ),

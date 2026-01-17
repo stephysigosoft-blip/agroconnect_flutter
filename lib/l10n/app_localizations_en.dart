@@ -252,6 +252,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get payNow => 'Pay Now';
 
   @override
+  String get orderNow => 'Order Now';
+
+  @override
   String get paymentRules => 'Payment Rules';
 
   @override
@@ -466,6 +469,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get no => 'No';
 
   @override
+  String get yes => 'Yes';
+
+  @override
   String get search => 'Search';
 
   @override
@@ -476,6 +482,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteChat => 'Delete Chat';
+
+  @override
+  String get chatReportedMessage =>
+      'This chat has been reported. You cannot send messages.';
 
   @override
   String get whatsAppNumberRequired => 'WhatsApp number is required';
@@ -912,4 +922,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String connectionError(String details) {
     return 'Connection Error: Please stop the app and \"Run\" again to link the new social media plugin correctly. \nDetails: $details';
   }
+
+  @override
+  String get selectPaymentMethod => 'Select Payment Method';
+
+  @override
+  String get cashOnDelivery => 'Cash on Delivery';
+
+  @override
+  String get placeOrder => 'Place Order';
+
+  @override
+  String get confirmOrder => 'Confirm Order';
+
+  @override
+  String get confirmOrderMessage =>
+      'Are you sure you want to place this order?';
+
+  @override
+  String get orderPlacedSuccessfully => 'Order placed successfully';
+
+  @override
+  String get orderCheckout => 'Order Checkout';
 }

@@ -177,6 +177,7 @@
   "transport": "Transport",
   "delivery": "Delivery",
   "payNow": "Pay Now",
+  "orderNow": "Order Now",
   "paymentRules": "Payment Rules",
   "transportCost": "Transport Cost (MRU)",
   "deliveryDuration": "Delivery Duration (Days)",
@@ -260,10 +261,12 @@
   "logout": "Logout",
   "logoutConfirmation": "Are you sure you want to logout?",
   "no": "No",
+  "yes": "Yes",
   "search": "Search",
   "noChatsYet": "No chats yet",
   "reportChat": "Report Chat",
   "deleteChat": "Delete Chat",
+  "chatReportedMessage": "This chat has been reported. You cannot send messages.",
   "whatsAppNumberRequired": "WhatsApp number is required",
   "pleaseEnterPhoneNumber": "Please enter your phone number",
   "allProducts": "All Products",
@@ -457,6 +460,13 @@
         "type": "String"
       }
     }
-  }
+  },
+  "selectPaymentMethod": "Select Payment Method",
+  "cashOnDelivery": "Cash on Delivery",
+  "placeOrder": "Place Order",
+  "confirmOrder": "Confirm Order",
+  "confirmOrderMessage": "Are you sure you want to place this order?",
+  "orderPlacedSuccessfully": "Order placed successfully",
+  "orderCheckout": "Order Checkout"
 }
 

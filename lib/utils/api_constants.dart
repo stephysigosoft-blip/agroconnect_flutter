@@ -24,6 +24,7 @@ class ApiConstants {
   static const String generateInvoice = 'generate-invoice';
   static const String downloadInvoice = 'download-invoice';
   static const String reportAd = 'report-ad';
+  static const String reportChat = 'report-chat';
   static const String uploadDocuments = 'upload-documents';
   static const String buyPackage = 'buy-package';
   static const String myAds = 'my-ads';
@@ -45,4 +46,9 @@ class ApiConstants {
   static const String logout = 'logout';
   static const String fetchSettings = 'fetch-settings';
   static const String deleteAccount = 'delete-account';
+  static const String completePayment = 'complete-payment';
+  static const String disputeOrder = 'dispute-order';
+  static const String markAsReceived = 'mark-as-received';
+  static const String dispatchOrder = 'dispatch-order';
+  static const String viewInvoice = 'view-invoice';
 }

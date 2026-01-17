@@ -76,6 +76,7 @@ class InvoiceRecord {
   final bool isCompleted;
   final String pdfPath;
   final bool isSold;
+  final int status;
 
   final String? deliveredDate;
   final String? paymentDate; // Payment from Buyer
@@ -99,6 +100,7 @@ class InvoiceRecord {
     required this.statusColor,
     required this.isCompleted,
     required this.pdfPath,
+    this.status = 0,
     this.isSold = false,
     this.deliveredDate,
     this.paymentDate,

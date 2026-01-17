@@ -8,6 +8,8 @@ import '../../controllers/home_controller.dart';
 import '../../utils/snackbar_helper.dart';
 import '../../models/product.dart';
 import 'package:agroconnect_flutter/l10n/app_localizations.dart';
+import 'package:geolocator/geolocator.dart';
+import 'location_selection_screen.dart';
 
 class SellItemScreen extends StatefulWidget {
   const SellItemScreen({super.key});
@@ -28,6 +30,8 @@ class _SellItemScreenState extends State<SellItemScreen> {
   XFile? _selectedVideo;
   // ignore: unused_field
   String? _selectedLocation;
+  String? _latitude;
+  String? _longitude;
 
   @override
   void dispose() {
@@ -173,9 +177,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
     });
   }
 
-  void _selectLocation() {
-    // Placeholder for location selection
-    // In a real app, you would integrate with Google Maps or similar
+  Future<void> _selectLocation() async {
     showDialog(
       context: context,
       builder:
@@ -185,48 +187,87 @@ class _SellItemScreenState extends State<SellItemScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: const Icon(
-                    Icons.location_on,
-                    color: Color(0xFF1B834F),
-                  ),
-                  title: Text(AppLocalizations.of(context)!.nouakchott),
-                  onTap: () {
-                    setState(() {
-                      _selectedLocation = 'Nouakchott';
-                    });
+                  leading: const Icon(Icons.my_location, color: Colors.blue),
+                  title: const Text('Use Current Location'),
+                  onTap: () async {
                     Get.back();
+                    await _getCurrentLocation();
                   },
                 ),
                 ListTile(
-                  leading: const Icon(
-                    Icons.location_on,
-                    color: Color(0xFF1B834F),
-                  ),
-                  title: Text(AppLocalizations.of(context)!.nouadhibou),
-                  onTap: () {
-                    setState(() {
-                      _selectedLocation = 'Nouadhibou';
-                    });
-                    Get.back();
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.location_on,
-                    color: Color(0xFF1B834F),
-                  ),
-                  title: Text(AppLocalizations.of(context)!.rosso),
-                  onTap: () {
-                    setState(() {
-                      _selectedLocation = 'Rosso';
-                    });
-                    Get.back();
+                  leading: const Icon(Icons.map, color: Color(0xFF1B834F)),
+                  title: const Text('Select Location'),
+                  onTap: () async {
+                    Get.back(); // Close dialog
+                    final result = await Get.to(
+                      () => LocationSelectionScreen(
+                        initialLatitude:
+                            _latitude != null
+                                ? double.tryParse(_latitude!) ?? 18.0735
+                                : 18.0735,
+                        initialLongitude:
+                            _longitude != null
+                                ? double.tryParse(_longitude!) ?? -15.9582
+                                : -15.9582,
+                      ),
+                    );
+
+                    if (result != null && result is Map) {
+                      setState(() {
+                        _latitude = result['latitude'];
+                        _longitude = result['longitude'];
+                        _selectedLocation = 'Custom Location';
+                      });
+                    }
                   },
                 ),
               ],
             ),
           ),
     );
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      Get.snackbar(
+        'Location Services Disabled',
+        'Please enable location services.',
+      );
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        Get.snackbar('Permission Denied', 'Location permissions are denied.');
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      Get.snackbar(
+        'Permission Denied',
+        'Location permissions are permanently denied.',
+      );
+      return;
+    }
+
+    try {
+      Position position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _latitude = position.latitude.toString();
+        _longitude = position.longitude.toString();
+        _selectedLocation = 'Current Location';
+      });
+    } catch (e) {
+      debugPrint('Error getting location: $e');
+      Get.snackbar('Error', 'Failed to get location');
+    }
   }
 
   void _handlePost() {
@@ -278,8 +319,8 @@ class _SellItemScreenState extends State<SellItemScreen> {
       description: _descriptionController.text,
       region: _selectedLocation ?? '',
       images: _selectedImages.map((e) => e.path).toList(),
-      latitude: '20.5184328', // Placeholder as per Postman
-      longitude: '-13.1491552', // Placeholder as per Postman
+      latitude: _latitude ?? '20.5184328',
+      longitude: _longitude ?? '-13.1491552',
     );
 
     if (response != null && response['status'] == true) {
@@ -1008,18 +1049,26 @@ class _SellItemScreenState extends State<SellItemScreen> {
         GestureDetector(
           onTap: _selectLocation,
           child: Container(
-            height: 90,
-            width: 150,
+            height: 120,
+            width: double.infinity,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              image: const DecorationImage(
-                image: AssetImage(
-                  'lib/assets/images/about farmer iamge.png',
-                ), // Using existing image as placeholder map
-                fit: BoxFit.cover,
-                opacity: 0.3,
-              ),
+              image:
+                  (_latitude != null && _longitude != null)
+                      ? DecorationImage(
+                        image: NetworkImage(
+                          "https://static-maps.yandex.ru/1.x/?ll=$_longitude,$_latitude&z=13&l=map&size=400,200&pt=$_longitude,$_latitude,pm2rdl",
+                        ),
+                        fit: BoxFit.cover,
+                      )
+                      : const DecorationImage(
+                        image: AssetImage(
+                          'lib/assets/images/about farmer iamge.png',
+                        ),
+                        fit: BoxFit.cover,
+                        opacity: 0.3,
+                      ),
               border: Border.all(color: Colors.grey.shade200),
               boxShadow: [
                 BoxShadow(
@@ -1029,8 +1078,32 @@ class _SellItemScreenState extends State<SellItemScreen> {
                 ),
               ],
             ),
-            child: const Center(
-              child: Icon(Icons.location_on, color: Colors.red, size: 30),
+            child: Center(
+              child:
+                  (_latitude != null && _longitude != null)
+                      ? Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _selectedLocation ??
+                              AppLocalizations.of(context)!.selectRegion,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                      : const Icon(
+                        Icons.location_on,
+                        color: Colors.red,
+                        size: 30,
+                      ),
             ),
           ),
         ),

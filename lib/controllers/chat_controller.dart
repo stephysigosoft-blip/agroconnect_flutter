@@ -422,7 +422,7 @@ class ChatMessage {
 
     return ChatMessage(
       id: id,
-      text: type == 'text' ? msg : null,
+      text: (type == 'text' || type == 'location') ? msg : null,
       imagePath: type == 'image' ? msg : null,
       invoicePath: type == 'invoice' ? msg : null,
       invoiceData: invoice,
@@ -529,25 +529,46 @@ class ChatController extends GetxController {
           if (!messages.any((m) => m.id == newMessage.id)) {
             messages.add(newMessage);
             messages.refresh();
+            // Since we are viewing it, ensure count is cleared
+            _clearLocalUnread(convId);
           }
         } else {
           // 2. Not in current chat? Update unread count for the thread
           final idx = threads.indexWhere((t) => t.id == convId);
           if (idx >= 0) {
-            // Remove from manually read set because a NEW message arrived
-            if (_manuallyReadIds.contains(convId)) {
-              _manuallyReadIds.remove(convId);
-              _saveReadIds();
-            }
-
             final t = threads[idx];
-            threads[idx] = t.copyWith(
-              unreadCount: t.unreadCount + 1,
-              lastMessage:
-                  newMessage.type == 'text' ? newMessage.text : newMessage.type,
-              timeLabel: newMessage.timeLabel,
-            );
-            threads.refresh();
+            // Only update if it's not a message FROM me (which shouldn't happen via Pusher usually, but possible)
+            if (!newMessage.isMe) {
+              // Remove from manually read set because a NEW message arrived
+              if (_manuallyReadIds.contains(convId)) {
+                _manuallyReadIds.remove(convId);
+                _saveReadIds();
+              }
+
+              threads[idx] = t.copyWith(
+                unreadCount: t.unreadCount + 1,
+                lastMessage:
+                    newMessage.type == 'text'
+                        ? (newMessage.text ?? 'Media')
+                        : newMessage.type,
+                timeLabel: newMessage.timeLabel,
+              );
+              threads.refresh();
+            } else {
+              // It's my message, just update last message text without unread count
+              threads[idx] = t.copyWith(
+                lastMessage:
+                    newMessage.type == 'text'
+                        ? (newMessage.text ?? 'Media')
+                        : newMessage.type,
+                timeLabel: newMessage.timeLabel,
+              );
+              threads.refresh();
+            }
+          } else {
+            // 3. New thread received! We don't have it in our list.
+            // Since we can't construct a full thread from just a message, we must fetch fresh threads.
+            fetchThreads();
           }
         }
       }
@@ -561,9 +582,6 @@ class ChatController extends GetxController {
       total += t.unreadCount;
     }
     unreadCount.value = total;
-
-    // Background sync to ensure all metadata is correct
-    // fetchThreads(); // Disabled to prevent full refresh on every message which might look glitchy
   }
 
   Future<void> _subscribeToChat(String conversationId) async {
@@ -1358,5 +1376,19 @@ class ChatController extends GetxController {
     final minute = dt.minute.toString().padLeft(2, '0');
     final suffix = dt.hour >= 12 ? 'PM' : 'AM';
     return '$hour:$minute $suffix';
+  }
+
+  Future<bool> reportChatApi(String conversationId, String reason) async {
+    try {
+      final apiService = Get.find<ApiService>();
+      final response = await apiService.reportChat(conversationId, reason);
+      if (response != null && response['status'] == true) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error reporting chat: $e');
+      return false;
+    }
   }
 }

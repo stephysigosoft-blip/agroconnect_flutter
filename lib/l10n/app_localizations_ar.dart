@@ -251,6 +251,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get payNow => 'ادفع الآن';
 
   @override
+  String get orderNow => 'اطلب الآن';
+
+  @override
   String get paymentRules => 'قواعد الدفع';
 
   @override
@@ -462,6 +465,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get no => 'لا';
 
   @override
+  String get yes => 'نعم';
+
+  @override
   String get search => 'بحث';
 
   @override
@@ -472,6 +478,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get deleteChat => 'حذف الدردشة';
+
+  @override
+  String get chatReportedMessage =>
+      'This chat has been reported. You cannot send messages.';
 
   @override
   String get whatsAppNumberRequired => 'رقم الواتساب مطلوب';
@@ -907,4 +917,26 @@ class AppLocalizationsAr extends AppLocalizations {
   String connectionError(String details) {
     return 'خطأ في الاتصال: يرجى إيقاف التطبيق وتشغيله مرة أخرى لربط المكون الإضافي الجديد لوسائل التواصل الاجتماعي بشكل صحيح. \nالتفاصيل: $details';
   }
+
+  @override
+  String get selectPaymentMethod => 'Select Payment Method';
+
+  @override
+  String get cashOnDelivery => 'Cash on Delivery';
+
+  @override
+  String get placeOrder => 'Place Order';
+
+  @override
+  String get confirmOrder => 'Confirm Order';
+
+  @override
+  String get confirmOrderMessage =>
+      'Are you sure you want to place this order?';
+
+  @override
+  String get orderPlacedSuccessfully => 'Order placed successfully';
+
+  @override
+  String get orderCheckout => 'Order Checkout';
 }

@@ -228,31 +228,38 @@ class _ChatListItem extends StatelessWidget {
                             onSelected: (value) {
                               if (value == 'delete') {
                                 controller.deleteThread(thread.id);
+                              } else if (value == 'report') {
+                                _showReportDialog(context, controller);
                               }
                             },
-                            itemBuilder:
-                                (context) => [
-                                  const PopupMenuItem(
-                                    value: 'report',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.flag_outlined, size: 18),
-                                        SizedBox(width: 8),
-                                        Text('Report Chat'),
-                                      ],
-                                    ),
+                            itemBuilder: (context) {
+                              final l10n = AppLocalizations.of(context)!;
+                              return [
+                                PopupMenuItem(
+                                  value: 'report',
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.flag_outlined, size: 18),
+                                      const SizedBox(width: 8),
+                                      Text(l10n.reportChat),
+                                    ],
                                   ),
-                                  const PopupMenuItem(
-                                    value: 'delete',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.delete_outline, size: 18),
-                                        SizedBox(width: 8),
-                                        Text('Delete Chat'),
-                                      ],
-                                    ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.delete_outline,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(l10n.deleteChat),
+                                    ],
                                   ),
-                                ],
+                                ),
+                              ];
+                            },
                           ),
                         ),
                       ],
@@ -331,5 +338,104 @@ class _ChatListItem extends StatelessWidget {
         ),
       );
     });
+  }
+
+  void _showReportDialog(BuildContext context, ChatController controller) {
+    final TextEditingController reasonController = TextEditingController();
+    final l10n = AppLocalizations.of(context)!;
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            title: Text(
+              l10n.reportChat,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.reason),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: reasonController,
+                  decoration: InputDecoration(
+                    hintText: l10n.pleaseEnterReason,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF1B834F)),
+                    ),
+                  ),
+                  maxLines: 3,
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  l10n.cancel,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final reason = reasonController.text.trim();
+                  if (reason.isEmpty) {
+                    Get.snackbar(
+                      l10n.error,
+                      l10n.pleaseEnterReason,
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.red,
+                      colorText: Colors.white,
+                    );
+                    return;
+                  }
+                  Navigator.pop(context); // Close dialog
+
+                  final success = await controller.reportChatApi(
+                    thread.id,
+                    reason,
+                  );
+
+                  if (success) {
+                    Get.snackbar(
+                      l10n.success,
+                      l10n.adReported,
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: const Color(0xFF1B834F),
+                      colorText: Colors.white,
+                    );
+                  } else {
+                    Get.snackbar(
+                      l10n.error,
+                      l10n.failedReport,
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.red,
+                      colorText: Colors.white,
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1B834F),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  l10n.submit,
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+    );
   }
 }

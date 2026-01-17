@@ -1,11 +1,13 @@
 import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../controllers/orders_controller.dart';
 import '../../utils/invoice_pdf_helper.dart';
 import 'dispute_screen.dart';
+import 'order_summary_screen.dart';
 
 class OrdersScreen extends StatelessWidget {
   const OrdersScreen({super.key});
@@ -178,13 +180,18 @@ class _OrderCard extends StatelessWidget {
 
   Color _getStatusColor(String status) {
     if (status.contains('Pending Payment') ||
-        status.contains('Awaiting Payment')) {
+        status.contains('Awaiting Payment') ||
+        status.contains('Waiting for Payment')) {
       return const Color(0xFFD4A017); // Golden/Mustard
     } else if (status.contains('Delivery Pending') ||
-        status.contains('Waiting for Delivery')) {
+        status.contains('Waiting for Delivery') ||
+        status.contains('Dispatched') ||
+        status.contains('Waiting for Delivery complete')) {
       return const Color(0xFF008CC9); // Blue
     } else if (status.contains('Completed') ||
-        status.contains('Payment Received')) {
+        status.contains('Payment Received') ||
+        status.contains('Payment Completed') ||
+        status.contains('Success')) {
       return const Color(0xFF1B834F); // Green
     }
     return Colors.grey;
@@ -195,9 +202,7 @@ class _OrderCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final statusColor = _getStatusColor(invoice.statusLabel);
 
-    // Determine if we should show the package box icon (Sold tab specific)
     final bool showPackageIcon =
-        !isBought &&
         (invoice.statusLabel.contains('Waiting for Delivery') ||
             invoice.statusLabel == 'Payment Received' ||
             invoice.statusLabel == 'Completed');
@@ -237,13 +242,43 @@ class _OrderCard extends StatelessWidget {
                       height:
                           180, // Increased height to match info height better
                       decoration: BoxDecoration(color: Colors.grey.shade100),
-                      child: Image.asset(
-                        invoice.productImagePath,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (context, error, stackTrace) =>
-                                const Icon(Icons.image_not_supported),
-                      ),
+                      child:
+                          invoice.productImagePath.startsWith('http')
+                              ? Image.network(
+                                invoice.productImagePath,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (
+                                  context,
+                                  child,
+                                  loadingProgress,
+                                ) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                      strokeWidth: 2,
+                                      color: const Color(0xFF1B834F),
+                                    ),
+                                  );
+                                },
+                                errorBuilder:
+                                    (context, error, stackTrace) =>
+                                        const Icon(Icons.image_not_supported),
+                              )
+                              : Image.asset(
+                                invoice.productImagePath,
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (context, error, stackTrace) =>
+                                        const Icon(Icons.image_not_supported),
+                              ),
                     ),
                   ),
                   Positioned(
@@ -427,9 +462,24 @@ class _OrderCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
-                  child: Image.asset(
-                    'lib/assets/images/categories/Rounded rectangle.png',
-                    fit: BoxFit.contain,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child:
+                        invoice.productImagePath.startsWith('http')
+                            ? Image.network(
+                              invoice.productImagePath,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (context, error, stackTrace) =>
+                                      const Icon(Icons.image_not_supported),
+                            )
+                            : Image.asset(
+                              invoice.productImagePath,
+                              fit: BoxFit.cover,
+                              errorBuilder:
+                                  (context, error, stackTrace) =>
+                                      const Icon(Icons.image_not_supported),
+                            ),
                   ),
                 ),
             ],
@@ -451,14 +501,8 @@ class _OrderCard extends StatelessWidget {
       Expanded(
         child: OutlinedButton(
           onPressed: () {
-            Get.snackbar(
-              l10n.invoice, // Assuming 'Invoice' key exists or use 'l10n.invoice' if added
-              'Opening Invoice PDF...', // Could localize this too
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: const Color(0xFF1B834F),
-              colorText: Colors.white,
-              margin: const EdgeInsets.all(16),
-            );
+            final ordersController = Get.find<OrdersController>();
+            ordersController.viewInvoice(invoice);
           },
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(44),
@@ -479,86 +523,133 @@ class _OrderCard extends StatelessWidget {
       ),
     );
 
-    // Determine secondary action
-    String? actionLabel;
-    VoidCallback? actionCallback;
+    // Determine secondary actions
+    List<Widget> secondaryButtons = [];
 
     if (isBought) {
-      if (invoice.statusLabel == 'Pending Payment') {
-        actionLabel = l10n.payNow;
-        actionCallback = () {
-          // TODO: implement API for paying
-        };
-      } else if (invoice.statusLabel == 'Delivery Pending') {
-        actionLabel = l10n.received;
-        actionCallback =
-            () => _showProofSheet(
-              context,
-              title: l10n.uploadDeliveryProof,
-              successStatus: 'Completed',
-              successColor: const Color(0xFF1B834F),
-              isCompleted: true,
-              deliveredDate: '12 Nov 2025',
-              showDispute: true,
-            );
+      if (invoice.status == 0) {
+        // Pending Payment
+        secondaryButtons.add(
+          _buildActionButton(
+            label: l10n.payNow,
+            onPressed: () => Get.to(() => OrderSummaryScreen(invoice: invoice)),
+            isFilled: true,
+          ),
+        );
+      } else if (invoice.status == 2) {
+        // Delivery Pending / Dispatched
+        secondaryButtons.add(
+          _buildActionButton(
+            label: l10n.received,
+            onPressed:
+                () => _showProofSheet(
+                  context,
+                  invoice: invoice, // Pass invoice
+                  title: l10n.uploadDeliveryProof,
+                  successStatus: 'Completed',
+                  successColor: const Color(0xFF1B834F),
+                  isCompleted: true,
+                  deliveredDate: '12 Nov 2025',
+                  showDispute: true,
+                ),
+            isFilled: true,
+          ),
+        );
       }
     } else {
       // Sold tab actions
-      if (invoice.statusLabel == 'Delivery Pending') {
-        actionLabel =
-            'Dispatch'; // I forgot to add Dispatch key? I have dispatched. Use dispatched or add key. I have dispatched: "Dispatched: ". I'll use "Dispatch" static for now or add "dispatch" key. Wait, I added "dispatched". I will add "dispatch" key or use "dispatch". I'll skip "dispatch" translation for now to avoid breaking flow, or check if I have it. I don't. I'll use text.
-        actionCallback =
-            () => _showProofSheet(
-              context,
-              title: l10n.uploadDeliveryProof,
-              successStatus: 'Waiting for Delivery\ncomplete',
-              successColor: const Color(0xFF008CC9),
-              isCompleted: false,
-              dispatchedDate: '12 Nov 2025',
-            );
+      final bool isDeliveryPending =
+          invoice.status == 1 ||
+          invoice.statusLabel.toLowerCase().contains('delivery pending') ||
+          invoice.statusLabel.toLowerCase().contains('awaiting dispatch');
+
+      if (isDeliveryPending) {
+        secondaryButtons.add(
+          _buildActionButton(
+            label: l10n.dispatch,
+            onPressed:
+                () => _showProofSheet(
+                  context,
+                  invoice: invoice,
+                  title: l10n.uploadDeliveryProof,
+                  successStatus: 'Waiting for Delivery\ncomplete',
+                  successColor: const Color(0xFF008CC9),
+                  isCompleted: false,
+                  dispatchedDate: '12 Nov 2025',
+                  showDispute: false,
+                ),
+            isFilled: true,
+          ),
+        );
       }
     }
 
-    if (actionLabel != null) {
-      buttons.add(const SizedBox(width: 12));
-      buttons.add(
-        Expanded(
-          child: ElevatedButton(
-            onPressed: actionCallback,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1B834F),
-              minimumSize: const Size.fromHeight(44),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+    if (secondaryButtons.isNotEmpty) {
+      for (var btn in secondaryButtons) {
+        buttons.add(const SizedBox(width: 8));
+        buttons.add(btn);
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(children: buttons),
+    );
+  }
+
+  Widget _buildActionButton({
+    required String label,
+    required VoidCallback onPressed,
+    required bool isFilled,
+  }) {
+    if (isFilled) {
+      return Expanded(
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1B834F),
+            minimumSize: const Size.fromHeight(44),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: Text(
-              actionLabel,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),
       );
     }
-
-    return Padding(
-      padding: const EdgeInsets.only(
-        top: 10,
-        bottom: 16,
-        left: 16,
-        right: 16,
-      ), // Increased horizontal padding for buttons
-      child: Row(children: buttons),
+    return Expanded(
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(44),
+          side: const BorderSide(color: Color(0xFF1B834F), width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF1B834F),
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 
   void _showProofSheet(
     BuildContext context, {
+    required InvoiceRecord invoice,
     required String title,
     required String successStatus,
     required Color successColor,
@@ -567,167 +658,287 @@ class _OrderCard extends StatelessWidget {
     String? deliveredDate,
     bool showDispute = false,
   }) {
+    final List<XFile> selectedFiles = [];
+    final ordersController = Get.find<OrdersController>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return Stack(
-          alignment: Alignment.topCenter,
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              height: MediaQuery.of(context).size.height * 0.5,
-              padding: const EdgeInsets.only(top: 40), // Space for title
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(30),
-                  topRight: Radius.circular(30),
-                ),
-              ),
-              child: Column(
-                children: [
-                  const SizedBox(height: 10),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Stack(
+              alignment: Alignment.topCenter,
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  height: MediaQuery.of(context).size.height * 0.55,
+                  padding: const EdgeInsets.only(top: 40), // Space for title
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
                     ),
                   ),
-                  const Divider(thickness: 1, height: 40),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: GestureDetector(
-                      onTap: () async {
-                        final ImagePicker picker = ImagePicker();
-                        await picker.pickImage(source: ImageSource.gallery);
-                      },
-                      child: Container(
-                        height: 140,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF2F4F7),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.image_outlined,
-                              size: 50,
-                              color: Color(0xFF1B834F),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              AppLocalizations.of(context)!.uploadImages,
-                              style: const TextStyle(
-                                color: Colors.black54,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 20,
-                    ),
-                    child: Row(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(54),
-                              side: const BorderSide(
-                                color: Color(0xFF1B834F),
-                                width: 1.5,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: Text(
-                              AppLocalizations.of(context)!.cancel,
-                              style: TextStyle(
-                                color: Color(0xFF1B834F),
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                        const SizedBox(height: 10),
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              // TODO: implement API for status update
+                        const Divider(thickness: 1, height: 40),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: GestureDetector(
+                            onTap: () async {
+                              final ImagePicker picker = ImagePicker();
+                              final List<XFile> picked =
+                                  await picker.pickMultiImage();
+                              if (picked.isNotEmpty) {
+                                setModalState(() {
+                                  selectedFiles.addAll(picked);
+                                });
+                              }
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1B834F),
-                              minimumSize: const Size.fromHeight(54),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
+                            child: Container(
+                              height: 110,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF2F4F7),
                                 borderRadius: BorderRadius.circular(16),
                               ),
-                            ),
-                            child: Text(
-                              AppLocalizations.of(context)!.submit,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.image_outlined,
+                                    size: 40,
+                                    color: Color(0xFF1B834F),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    AppLocalizations.of(context)!.uploadImages,
+                                    style: const TextStyle(
+                                      color: Colors.black54,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ),
+                        if (selectedFiles.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 80,
+                            child: ListView.separated(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              scrollDirection: Axis.horizontal,
+                              itemCount: selectedFiles.length,
+                              separatorBuilder:
+                                  (context, index) => const SizedBox(width: 8),
+                              itemBuilder: (context, index) {
+                                return Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.file(
+                                        File(selectedFiles[index].path),
+                                        width: 80,
+                                        height: 80,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 4,
+                                      right: 4,
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setModalState(() {
+                                            selectedFiles.removeAt(index);
+                                          });
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.all(2),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.black54,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(
+                                            Icons.close,
+                                            color: Colors.white,
+                                            size: 14,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 20),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 16,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size.fromHeight(48),
+                                    side: const BorderSide(
+                                      color: Color(0xFF1B834F),
+                                      width: 1.5,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    AppLocalizations.of(context)!.cancel,
+                                    style: const TextStyle(
+                                      color: Color(0xFF1B834F),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Obx(() {
+                                  return ElevatedButton(
+                                    onPressed:
+                                        ordersController.isLoading.value
+                                            ? null
+                                            : () {
+                                              if (isCompleted) {
+                                                // Received button flow
+                                                ordersController
+                                                    .markOrderAsReceived(
+                                                      orderId: invoice.id,
+                                                      images: selectedFiles,
+                                                    );
+                                              } else {
+                                                // Dispatch flow
+                                                ordersController.dispatchOrder(
+                                                  orderId: invoice.id,
+                                                  images: selectedFiles,
+                                                );
+                                              }
+                                            },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF1B834F),
+                                      minimumSize: const Size.fromHeight(48),
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child:
+                                        ordersController.isLoading.value
+                                            ? const SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                            : Text(
+                                              AppLocalizations.of(
+                                                context,
+                                              )!.submit,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                  );
+                                }),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (showDispute) ...[
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  Get.to(
+                                    () => DisputeScreen(orderId: invoice.id),
+                                  );
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  fixedSize: const Size(200, 48),
+                                  side: const BorderSide(
+                                    color: Colors.red,
+                                    width: 1.5,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: Text(
+                                  AppLocalizations.of(context)!.raiseDispute,
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
                       ],
                     ),
                   ),
-                  if (showDispute) ...[
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Get.to(() => DisputeScreen(orderId: invoice.id));
-                      },
-                      child: Text(
-                        AppLocalizations.of(context)!.raiseDispute,
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                          decoration: TextDecoration.underline,
-                        ),
+                ),
+                Positioned(
+                  top: -70,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color: Colors.grey,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.black,
+                        size: 24,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                  ],
-                ],
-              ),
-            ),
-            Positioned(
-              top: -60,
-              child: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(
-                    color: Colors.black,
-                    shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 30),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
