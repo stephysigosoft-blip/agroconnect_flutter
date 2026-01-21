@@ -166,7 +166,7 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                '${invoice.unitPrice} MRU / Kg',
+                                '${invoice.unitPrice} ${l10n.currencyMru} / ${l10n.unitKg}',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: Color(0xFF1B834F),
@@ -178,11 +178,14 @@ class _OrderSummaryScreenState extends State<OrderSummaryScreen> {
                       ],
                     ),
                     const Divider(height: 32),
-                    _buildSummaryRow(l10n.quantity, '${invoice.quantity} Kg'),
+                    _buildSummaryRow(
+                      l10n.quantity,
+                      '${invoice.quantity} ${l10n.unitKg}',
+                    ),
                     const SizedBox(height: 8),
                     _buildSummaryRow(
                       l10n.totalAmount,
-                      '${invoice.totalAmount} MRU',
+                      '${invoice.totalAmount} ${l10n.currencyMru}',
                       isTotal: true,
                     ),
                   ],

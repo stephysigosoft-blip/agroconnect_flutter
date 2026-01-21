@@ -490,16 +490,22 @@ class ApiService extends get_pkg.GetxService {
     }
   }
 
-  Future<Map<String, dynamic>?> getConversation(dynamic conversationId) async {
+  Future<Map<String, dynamic>?> getConversation(
+    dynamic conversationId, {
+    int page = 1,
+    int limit = 20,
+  }) async {
     try {
-      _logApiCall(
-        'getConversation',
-        params: {'conversation_id': conversationId},
-      );
+      final params = {
+        'conversation_id': conversationId,
+        'page': page,
+        'limit': limit,
+      };
+      _logApiCall('getConversation', params: params);
       final options = await _getAuthOptions();
       final response = await _dio.get(
         ApiConstants.getConversation,
-        queryParameters: {'conversation_id': conversationId},
+        queryParameters: params,
         options: options,
       );
       _logSuccess('getConversation', response.statusCode, response.data);
@@ -917,9 +923,9 @@ class ApiService extends get_pkg.GetxService {
     try {
       _logApiCall('deleteFromWishlist', params: {'product_id': productId});
       final options = await _getAuthOptions();
-      final response = await _dio.post(
+      final response = await _dio.get(
         ApiConstants.deleteFromWishlist,
-        data: {'product_id': productId},
+        queryParameters: {'product_id': productId},
         options: options,
       );
       _logSuccess('deleteFromWishlist', response.statusCode, response.data);

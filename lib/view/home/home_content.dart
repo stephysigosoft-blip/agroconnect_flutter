@@ -23,9 +23,9 @@ class HomeContent extends StatelessWidget {
         elevation: 0,
         automaticallyImplyLeading: false,
         centerTitle: true,
-        title: const Text(
-          'SAIMPEX AGRO',
-          style: TextStyle(
+        title: Text(
+          l10n.saimpexAgro,
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w900,
             color: Color(0xFF1B834F),
@@ -85,7 +85,7 @@ class HomeContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 // Promotional Banner
                 _buildPromotionalBanner(l10n, controller),
                 const SizedBox(height: 24),
@@ -103,7 +103,7 @@ class HomeContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 _buildCategoriesSection(l10n, productController),
-                const SizedBox(height: 10),
+                // const SizedBox(height: 5),
 
                 // Recently Added Section
                 Padding(
@@ -189,7 +189,6 @@ class HomeContent extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       width: double.infinity,
       height: 180,
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(24)),
       child: Stack(
         children: [
           // Carousel pages
@@ -197,62 +196,57 @@ class HomeContent extends StatelessWidget {
             () => ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: PageView.builder(
-                controller: PageController(),
+                controller: controller.bannerPageController,
                 itemCount: controller.bannerImages.length,
                 onPageChanged: controller.onBannerPageChanged,
                 itemBuilder: (context, index) {
                   final imagePath = controller.bannerImages[index];
                   final isNetwork = imagePath.startsWith('http');
-                  return Container(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child:
-                          isNetwork
-                              ? Image.network(
-                                imagePath,
-                                fit: BoxFit.fill,
-                                width: double.infinity,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: Colors.white,
-                                    child: const Icon(
-                                      Icons.image_not_supported_outlined,
-                                      size: 50,
-                                      color: Colors.grey,
-                                    ),
-                                  );
-                                },
-                                loadingBuilder: (context, child, progress) {
-                                  if (progress == null) return child;
-                                  return Center(
-                                    child: CircularProgressIndicator(
-                                      value:
-                                          progress.expectedTotalBytes != null
-                                              ? progress.cumulativeBytesLoaded /
-                                                  progress.expectedTotalBytes!
-                                              : null,
-                                      color: const Color(0xFF1B834F),
-                                      strokeWidth: 2,
-                                    ),
-                                  );
-                                },
-                              )
-                              : Image.asset(
-                                imagePath,
-                                fit: BoxFit.fill,
-                                width: double.infinity,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: Colors.white,
-                                    child: const Icon(
-                                      Icons.landscape,
-                                      size: 50,
-                                    ),
-                                  );
-                                },
+                  return isNetwork
+                      ? Image.network(
+                        imagePath,
+                        fit: BoxFit.fill,
+                        filterQuality: FilterQuality.high,
+                        isAntiAlias: true,
+                        width: double.infinity,
+                        height: 180,
+                        errorBuilder:
+                            (context, error, stackTrace) => Container(
+                              color: Colors.white,
+                              child: const Icon(
+                                Icons.image_not_supported_outlined,
+                                size: 50,
+                                color: Colors.grey,
                               ),
-                    ),
-                  );
+                            ),
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value:
+                                  progress.expectedTotalBytes != null
+                                      ? progress.cumulativeBytesLoaded /
+                                          progress.expectedTotalBytes!
+                                      : null,
+                              color: const Color(0xFF1B834F),
+                              strokeWidth: 2,
+                            ),
+                          );
+                        },
+                      )
+                      : Image.asset(
+                        imagePath,
+                        fit: BoxFit.fill,
+                        filterQuality: FilterQuality.high,
+                        isAntiAlias: true,
+                        width: double.infinity,
+                        height: 180,
+                        errorBuilder:
+                            (context, error, stackTrace) => Container(
+                              color: Colors.white,
+                              child: const Icon(Icons.landscape, size: 50),
+                            ),
+                      );
                 },
               ),
             ),
@@ -552,9 +546,9 @@ class HomeContent extends StatelessWidget {
                                 () =>
                                     controller.fetchRecommended(loadMore: true),
                             child: Text(
-                              'Load More',
-                              style: TextStyle(
-                                color: const Color(0xFF1B834F),
+                              l10n.loadMore,
+                              style: const TextStyle(
+                                color: Color(0xFF1B834F),
                                 fontWeight: FontWeight.bold,
                               ),
                             ),

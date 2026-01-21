@@ -938,5 +938,132 @@ class AppLocalizationsAr extends AppLocalizations {
   String get orderPlacedSuccessfully => 'Order placed successfully';
 
   @override
-  String get orderCheckout => 'Order Checkout';
+  String get orderCheckout => 'إتمام الطلب';
+
+  @override
+  String get statusPendingPayment => 'في انتظار الدفع';
+
+  @override
+  String get statusDeliveryPending => 'التسليم معلق';
+
+  @override
+  String get statusWaitingForDelivery => 'بانتظار التسليم';
+
+  @override
+  String get statusDispatched => 'تم الشحن';
+
+  @override
+  String get statusWaitingForDeliveryComplete => 'بانتظار اكتمال التسليم';
+
+  @override
+  String get statusPaymentReceived => 'تم استلام الدفع';
+
+  @override
+  String get statusCompleted => 'مكتمل';
+
+  @override
+  String get statusAwaitingPayment => 'بانتظار الدفع';
+
+  @override
+  String get statusOrderPlaced => 'تم الطلب';
+
+  @override
+  String get invoiceTitle => 'فاتورة';
+
+  @override
+  String get expectedDelivery => 'التسليم المتوقع';
+
+  @override
+  String get priceLabel => 'السعر';
+
+  @override
+  String get quantityLabel => 'الكمية';
+
+  @override
+  String get transportCostLabel => 'تكلفة النقل';
+
+  @override
+  String get orderConfirmedSuccess => 'تم تأكيد الطلب بنجاح';
+
+  @override
+  String get orderConfirmedFailed => 'فشل تأكيد الطلب';
+
+  @override
+  String get orderMarkedReceived => 'تم وضع علامة على الطلب كمستلم';
+
+  @override
+  String get orderMarkedReceivedFailed => 'فشل وضع علامة كمستلم';
+
+  @override
+  String get orderDispatchedSuccess => 'تم شحن الطلب بنجاح';
+
+  @override
+  String get orderDispatchedFailed => 'فشل شحن الطلب';
+
+  @override
+  String get disputeSubmittedSuccess => 'تم تقديم النزاع بنجاح';
+
+  @override
+  String get disputeSubmittedFailed => 'فشل تقديم النزاع';
+
+  @override
+  String get invoiceDetailsTitle => 'تفاصيل الفاتورة';
+
+  @override
+  String get orderDetailsTitle => 'تفاصيل الطلب';
+
+  @override
+  String get productImageTitle => 'صورة المنتج';
+
+  @override
+  String couldNotFindOrderDetails(String id) {
+    return 'تعذر العثور على تفاصيل الطلب للفاتورة #$id';
+  }
+
+  @override
+  String get disputeNote2 => 'يمكنك الإبلاغ عن مشكلة إذا كان المنتج تالفاً.';
+
+  @override
+  String get disputeNote3 => 'قم بتحميل صور واضحة كدليل.';
+
+  @override
+  String get disputeNote4 => 'سيقوم فريق الدعم بمراجعة طلبك قريباً.';
+
+  @override
+  String get saimpexAgro => 'SAIMPEX AGRO';
+
+  @override
+  String get loadMore => 'تحميل المزيد';
+
+  @override
+  String get unitKg => 'كجم';
+
+  @override
+  String get currencyMru => 'أوقية';
+
+  @override
+  String get fileExtensionPdf => '.pdf';
+
+  @override
+  String get paymentRule1 =>
+      'سيتم إلغاء الفاتورة تلقائيًا إذا لم يقم المشتري بالتأكيد خلال 48 ساعة.';
+
+  @override
+  String get paymentRule2 => 'يجب رفع النزاع خلال 72 ساعة.';
+
+  @override
+  String get paymentRule3 =>
+      'Cras dapibus est suscipit accumsan sollicitudin (نص عنصر نائب).';
+
+  @override
+  String get paymentRule4 =>
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. (نص عنصر نائب)';
+
+  @override
+  String get paymentRule5 =>
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. (نص عنصر نائب)';
+
+  @override
+  String get paymentRule6 =>
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. (نص عنصر نائب)';
 }

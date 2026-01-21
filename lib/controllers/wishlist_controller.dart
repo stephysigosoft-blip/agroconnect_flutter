@@ -15,7 +15,7 @@ class WishlistController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // fetchWishlist(); // Removed to fetch only on click
+    fetchWishlist(); // Fetch on init to sync with server
   }
 
   Future<void> fetchWishlist({bool loadMore = false}) async {

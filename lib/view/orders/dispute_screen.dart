@@ -329,15 +329,9 @@ class _DisputeScreenState extends State<DisputeScreen> {
             ),
             const SizedBox(height: 10),
             _buildNotePoint(l10n.disputeNote1),
-            _buildNotePoint(
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-            ),
-            _buildNotePoint(
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-            ),
-            _buildNotePoint(
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-            ),
+            _buildNotePoint(l10n.disputeNote2),
+            _buildNotePoint(l10n.disputeNote3),
+            _buildNotePoint(l10n.disputeNote4),
           ],
         ),
       ),

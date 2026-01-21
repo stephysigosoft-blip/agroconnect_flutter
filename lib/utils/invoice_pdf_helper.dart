@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 
 class InvoiceData {
   final String price;
@@ -23,7 +24,10 @@ class InvoiceData {
 }
 
 class InvoicePdfHelper {
-  static Future<String> generateInvoice(InvoiceData data) async {
+  static Future<String> generateInvoice(
+    InvoiceData data,
+    AppLocalizations l10n,
+  ) async {
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -36,17 +40,25 @@ class InvoicePdfHelper {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  'Invoice',
+                  l10n.invoiceTitle,
                   style: pw.TextStyle(
                     fontSize: 24,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
                 pw.SizedBox(height: 16),
-                pw.Text('Price: ${data.price} MRU'),
-                pw.Text('Quantity: ${data.quantity} Kg'),
-                pw.Text('Transport cost: ${data.transportCost} MRU'),
-                pw.Text('Expected delivery: ${data.delivery} days'),
+                pw.Text(
+                  '${l10n.priceLabel}: ${data.price} ${l10n.currencyMru}',
+                ),
+                pw.Text(
+                  '${l10n.quantityLabel}: ${data.quantity} ${l10n.unitKg}',
+                ),
+                pw.Text(
+                  '${l10n.transportCostLabel}: ${data.transportCost} ${l10n.currencyMru}',
+                ),
+                pw.Text(
+                  '${l10n.expectedDelivery}: ${data.delivery} ${l10n.days}',
+                ),
               ],
             ),
           );

@@ -4,6 +4,7 @@ import '../models/product.dart';
 import '../services/api_service.dart';
 import 'package:dio/dio.dart' as dio;
 import 'product_controller.dart';
+import '../l10n/app_localizations.dart';
 
 class MyAdsController extends GetxController {
   final RxList<Product> activeAds = <Product>[].obs;
@@ -162,10 +163,11 @@ class MyAdsController extends GetxController {
 
   Future<void> deleteAd(dynamic id) async {
     try {
+      final l10n = AppLocalizations.of(Get.context!)!;
       print('🔵 [MyAdsController] Deleting ad, ID: $id');
       Get.snackbar(
-        'Processing',
-        'Deleting ad...',
+        l10n.processing,
+        l10n.deletingAd,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.blueAccent,
         colorText: Colors.white,
@@ -178,8 +180,8 @@ class MyAdsController extends GetxController {
       if (response != null && response['status'] == true) {
         print('✅ [MyAdsController] Success! Refreshing ads list...');
         Get.snackbar(
-          'Success',
-          'Ad deleted successfully',
+          l10n.success,
+          l10n.adDeletedSuccessfully,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
@@ -187,7 +189,7 @@ class MyAdsController extends GetxController {
         fetchMyAds(); // Refresh
       } else {
         print('⚠️ [MyAdsController] Delete ad failed or status false');
-        String errorMsg = 'Failed to delete ad';
+        String errorMsg = l10n.failedToDeleteAd;
         if (response != null && response['message'] != null) {
           final msg = response['message'];
           if (msg is Map && msg.containsKey('message_en')) {
@@ -211,10 +213,11 @@ class MyAdsController extends GetxController {
 
   Future<void> markAsSold(dynamic id) async {
     try {
+      final l10n = AppLocalizations.of(Get.context!)!;
       print('🔵 [MyAdsController] Marking as sold, ID: $id');
       Get.snackbar(
-        'Processing',
-        'Marking ad as sold...',
+        l10n.processing,
+        l10n.markingAsSold,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.blueAccent,
         colorText: Colors.white,
@@ -227,8 +230,8 @@ class MyAdsController extends GetxController {
       if (response != null && response['status'] == true) {
         print('✅ [MyAdsController] Success! Refreshing ads list...');
         Get.snackbar(
-          'Success',
-          'Ad marked as sold',
+          l10n.success,
+          l10n.adMarkedAsSold,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
@@ -236,7 +239,7 @@ class MyAdsController extends GetxController {
         fetchMyAds(); // Refresh
       } else {
         print('⚠️ [MyAdsController] Mark as sold failed or status false');
-        String errorMsg = 'Failed to mark as sold';
+        String errorMsg = l10n.failedToMarkAsSold;
         if (response != null && response['message'] != null) {
           final msg = response['message'];
           if (msg is Map && msg.containsKey('message_en')) {
@@ -246,7 +249,7 @@ class MyAdsController extends GetxController {
           }
         }
         Get.snackbar(
-          'Error',
+          l10n.error,
           errorMsg,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.redAccent,
@@ -260,10 +263,11 @@ class MyAdsController extends GetxController {
 
   Future<void> deactivateAd(dynamic id) async {
     try {
+      final l10n = AppLocalizations.of(Get.context!)!;
       print('🔵 [MyAdsController] Deactivating ad, ID: $id');
       Get.snackbar(
-        'Processing',
-        'Deactivating ad...',
+        l10n.processing,
+        l10n.deactivatingAd,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.blueAccent,
         colorText: Colors.white,
@@ -276,8 +280,8 @@ class MyAdsController extends GetxController {
       if (response != null && response['status'] == true) {
         print('✅ [MyAdsController] Success! Refreshing ads list...');
         Get.snackbar(
-          'Success',
-          'Ad deactivated successfully',
+          l10n.success,
+          l10n.adDeactivatedSuccessfully,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
@@ -285,7 +289,7 @@ class MyAdsController extends GetxController {
         fetchMyAds(); // Refresh
       } else {
         print('⚠️ [MyAdsController] Deactivate ad failed or status false');
-        String errorMsg = 'Failed to deactivate ad';
+        String errorMsg = l10n.failedToDeactivateAd;
         if (response != null && response['message'] != null) {
           final msg = response['message'];
           if (msg is Map && msg.containsKey('message_en')) {
@@ -295,7 +299,7 @@ class MyAdsController extends GetxController {
           }
         }
         Get.snackbar(
-          'Error',
+          l10n.error,
           errorMsg,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.redAccent,
@@ -315,6 +319,7 @@ class MyAdsController extends GetxController {
     required String quantity,
   }) async {
     try {
+      final l10n = AppLocalizations.of(Get.context!)!;
       print('🚀 [MyAdsController] Updating ad ID: $adId');
       isLoading.value = true;
       final apiService = Get.find<ApiService>();
@@ -347,7 +352,7 @@ class MyAdsController extends GetxController {
         return true;
       } else {
         print('❌ [MyAdsController] Update failed: $response');
-        String errorMsg = 'Failed to update ad';
+        String errorMsg = l10n.failedToUpdateAd;
         if (response != null && response['message'] != null) {
           final msg = response['message'];
           if (msg is Map && msg.containsKey('message_en')) {
@@ -356,8 +361,9 @@ class MyAdsController extends GetxController {
             errorMsg = msg.toString();
           }
         }
+
         Get.snackbar(
-          'Error',
+          l10n.error,
           errorMsg,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.redAccent,

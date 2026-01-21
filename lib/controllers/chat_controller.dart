@@ -125,7 +125,7 @@ class ChatThread {
       <String, _ProductMeta>{}.obs;
 
   factory ChatThread.fromJson(Map<String, dynamic> json) {
-    final id = (json['id'] ?? '').toString();
+    final id = (json['id'] ?? '').toString().trim();
 
     // 1. Resolve Product Data - Absolute Recursive Search
     final dynamic rawP =
@@ -180,7 +180,8 @@ class ChatThread {
                 pMap['ad_id'] ??
                 pMap['item_id'] ??
                 '')
-            .toString();
+            .toString()
+            .trim();
 
     final productId = (pId == 'null' || pId == '0') ? '' : pId;
 
@@ -446,6 +447,11 @@ class ChatController extends GetxController {
   final RxBool isLoadingMore = false.obs;
   final RxInt unreadCount = 0.obs;
 
+  // Message Pagination State
+  final RxInt messagePage = 1.obs;
+  final RxBool hasMoreMessages = true.obs;
+  final RxBool isLoadingMoreMessages = false.obs;
+
   final RxString currentUserId = ''.obs;
   final RxString currentOpenedConversationId = ''.obs;
   final Set<String> _manuallyReadIds = {};
@@ -461,9 +467,9 @@ class ChatController extends GetxController {
   void onInit() {
     super.onInit();
     _initPusher();
-    // Load persisted IDs and current user, then fetch threads once.
-    _loadReadIds().then((_) {
-      _loadCurrentUserId().then((_) {
+    // Load current user first, then use their ID to load user-specific read status
+    _loadCurrentUserId().then((_) {
+      _loadReadIds().then((_) {
         _loadMyProducts();
         fetchThreads();
       });
@@ -522,7 +528,8 @@ class ChatController extends GetxController {
             (msgJson['conversation_id'] ??
                     msgJson['id'] ??
                     event.channelName.split('.').last)
-                .toString();
+                .toString()
+                .trim();
 
         // 1. If currently viewing this chat, add message instantly
         if (currentOpenedConversationId.value == convId) {
@@ -621,12 +628,26 @@ class ChatController extends GetxController {
   Future<void> _loadReadIds() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final List<String>? savedIds = prefs.getStringList(
+
+      // 1. Load from generic key (always)
+      final List<String>? genericIds = prefs.getStringList(
         'read_conversation_ids',
       );
-      if (savedIds != null) {
-        _manuallyReadIds.addAll(savedIds);
+      if (genericIds != null) {
+        _manuallyReadIds.addAll(genericIds.map((e) => e.trim()));
       }
+
+      // 2. Load from user-specific key if available
+      final String userId = currentUserId.value.trim();
+      if (userId.isNotEmpty && userId != 'null') {
+        final String key = 'read_conversation_ids_$userId';
+        final List<String>? userIds = prefs.getStringList(key);
+        if (userIds != null) {
+          _manuallyReadIds.addAll(userIds.map((e) => e.trim()));
+        }
+      }
+
+      debugPrint('📩 Loaded ${_manuallyReadIds.length} read chat IDs');
     } catch (e) {
       debugPrint('❌ Error loading read IDs: $e');
     }
@@ -635,10 +656,17 @@ class ChatController extends GetxController {
   Future<void> _saveReadIds() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(
-        'read_conversation_ids',
-        _manuallyReadIds.toList(),
-      );
+      final listToSave = _manuallyReadIds.map((e) => e.trim()).toList();
+
+      // Always save to generic key for robustness
+      await prefs.setStringList('read_conversation_ids', listToSave);
+
+      // Also save to user-specific key for persistence across logout/login
+      final String userId = currentUserId.value.trim();
+      if (userId.isNotEmpty && userId != 'null') {
+        final String key = 'read_conversation_ids_$userId';
+        await prefs.setStringList(key, listToSave);
+      }
     } catch (e) {
       debugPrint('❌ Error saving read IDs: $e');
     }
@@ -787,8 +815,8 @@ class ChatController extends GetxController {
           page.value++;
         }
 
-        // Update unread count
-        _updateUnreadCount(data);
+        // Update unread count based on processed threads (respects local suppression)
+        _updateUnreadCountFromThreads();
 
         // Sync missing product images in background
         _syncMissingProductInfo(threads);
@@ -977,48 +1005,40 @@ class ChatController extends GetxController {
     }
   }
 
-  void _updateUnreadCount(List data) {
+  void _updateUnreadCountFromThreads() {
     int total = 0;
-    for (var item in data) {
-      if (item is Map) {
-        final id = (item['id'] ?? '').toString();
-        final prodId = (item['product_id'] ?? item['ad_id'] ?? '').toString();
-
-        // If this conversation is currently open or manually read, suppress count
-        if (id == currentOpenedConversationId.value ||
-            _manuallyReadIds.contains(id) ||
-            _manuallyReadIds.contains(prodId)) {
-          continue;
-        }
-        final count =
-            int.tryParse((item['unread_count'] ?? '0').toString()) ?? 0;
-        total += count;
-      }
+    for (var t in threads) {
+      total += t.unreadCount;
     }
     unreadCount.value = total;
-    debugPrint('📩 Total Unread Messages: ${unreadCount.value}');
+    debugPrint('📩 Total Unread Messages (Synced): ${unreadCount.value}');
   }
 
   void _clearLocalUnread(String conversationId) {
     bool changed = false;
+    final String targetId = conversationId.trim();
 
     // 1. Find the thread to get the productId for comprehensive persistence
     String? linkedProductId;
     for (var t in threads) {
-      if (t.id == conversationId || t.productId == conversationId) {
-        linkedProductId = t.productId;
+      if (t.id.trim() == targetId || t.productId.trim() == targetId) {
+        linkedProductId = t.productId.trim();
         break;
       }
     }
 
     // 2. Add to persistent set and save immediately
     bool added = false;
-    if (!_manuallyReadIds.contains(conversationId)) {
-      _manuallyReadIds.add(conversationId);
-      added = true;
+    if (targetId.isNotEmpty && targetId != 'null') {
+      if (!_manuallyReadIds.contains(targetId)) {
+        _manuallyReadIds.add(targetId);
+        added = true;
+      }
     }
+
     if (linkedProductId != null &&
         linkedProductId.isNotEmpty &&
+        linkedProductId != 'null' &&
         !_manuallyReadIds.contains(linkedProductId)) {
       _manuallyReadIds.add(linkedProductId);
       added = true;
@@ -1030,10 +1050,10 @@ class ChatController extends GetxController {
 
     // 3. Clear local counts for reactive UI feedback
     for (int i = 0; i < threads.length; i++) {
-      if ((threads[i].id == conversationId ||
-              threads[i].productId == conversationId ||
+      if ((threads[i].id.trim() == targetId ||
+              threads[i].productId.trim() == targetId ||
               (linkedProductId != null &&
-                  threads[i].productId == linkedProductId)) &&
+                  threads[i].productId.trim() == linkedProductId)) &&
           threads[i].unreadCount > 0) {
         threads[i] = threads[i].copyWith(unreadCount: 0);
         changed = true;
@@ -1051,10 +1071,20 @@ class ChatController extends GetxController {
     }
   }
 
-  Future<void> fetchMessages(String conversationId) async {
+  Future<void> fetchMessages(
+    String conversationId, {
+    bool loadMore = false,
+  }) async {
     try {
-      isFetchingMessages.value = true;
-      messages.clear();
+      if (loadMore) {
+        if (isLoadingMoreMessages.value || !hasMoreMessages.value) return;
+        isLoadingMoreMessages.value = true;
+      } else {
+        isFetchingMessages.value = true;
+        messagePage.value = 1;
+        hasMoreMessages.value = true;
+        messages.clear(); // Only clear on fresh load
+      }
 
       String targetId = conversationId;
       // If the provided ID is a placeholder (Product ID),
@@ -1066,10 +1096,12 @@ class ChatController extends GetxController {
       );
       if (existingThread != null) {
         targetId = existingThread.id;
-        currentOpenedConversationId.value = targetId;
-        _subscribeToChat(targetId);
-        _syncThreadMetadata(existingThread);
-        _clearLocalUnread(targetId);
+        if (!loadMore) {
+          currentOpenedConversationId.value = targetId;
+          _subscribeToChat(targetId);
+          _syncThreadMetadata(existingThread);
+          _clearLocalUnread(targetId);
+        }
       } else {
         // If no thread, and conversationId is numeric, it's likely a productId. Sync it!
         if (conversationId.isNotEmpty &&
@@ -1080,69 +1112,92 @@ class ChatController extends GetxController {
       }
 
       final apiService = Get.find<ApiService>();
-      final response = await apiService.getConversation(targetId);
+      final response = await apiService.getConversation(
+        targetId,
+        page: messagePage.value,
+        limit: 20,
+      );
+
       if (response != null && response['status'] == true) {
         final List data =
             (response['data'] is List)
                 ? response['data']
                 : (response['data']['messages'] ?? []);
 
-        messages.value =
+        final newMessages =
             data
                 .map((json) => ChatMessage.fromJson(json, currentUserId.value))
                 .toList();
 
-        // Ensure we are subscribed to this channel for live updates
-        _subscribeToChat(targetId);
+        // Check if there are more items to load
+        if (newMessages.length < 20) {
+          hasMoreMessages.value = false;
+        } else {
+          messagePage.value++;
+        }
 
-        // Sync thread info if available in response
-        final dynamic metaConversation =
-            (response['data'] is Map) ? response['data']['conversation'] : null;
-        if (metaConversation != null && metaConversation is Map) {
-          try {
-            final updatedThread = ChatThread.fromJson(
-              Map<String, dynamic>.from(metaConversation),
-            );
-            final idx = threads.indexWhere(
-              (t) =>
-                  t.id == updatedThread.id ||
-                  t.productId == updatedThread.productId,
-            );
-            if (idx >= 0) {
-              // Smart Merge: Don't downgrade identity or message info
-              var merged = updatedThread;
+        if (loadMore) {
+          // Add older messages to the START of the list (list is [Oldest → Newest])
+          messages.insertAll(0, newMessages);
+        } else {
+          messages.assignAll(newMessages);
 
-              // Preserve existing last message if new one is empty
-              if (merged.lastMessage.isEmpty &&
-                  threads[idx].lastMessage.isNotEmpty) {
-                merged = merged.copyWith(
-                  lastMessage: threads[idx].lastMessage,
-                  timeLabel: threads[idx].timeLabel,
-                );
+          // Ensure we are subscribed to this channel for live updates
+          _subscribeToChat(targetId);
+
+          // Sync thread info if available in response
+          final dynamic metaConversation =
+              (response['data'] is Map)
+                  ? response['data']['conversation']
+                  : null;
+          if (metaConversation != null && metaConversation is Map) {
+            try {
+              final updatedThread = ChatThread.fromJson(
+                Map<String, dynamic>.from(metaConversation),
+              );
+              final idx = threads.indexWhere(
+                (t) =>
+                    t.id == updatedThread.id ||
+                    t.productId == updatedThread.productId,
+              );
+              if (idx >= 0) {
+                // Smart Merge: Don't downgrade identity or message info
+                var merged = updatedThread;
+
+                // Preserve existing last message if new one is empty
+                if (merged.lastMessage.isEmpty &&
+                    threads[idx].lastMessage.isNotEmpty) {
+                  merged = merged.copyWith(
+                    lastMessage: threads[idx].lastMessage,
+                    timeLabel: threads[idx].timeLabel,
+                  );
+                }
+
+                // Absolute Truth: If we have messages, the last one is the REAL last message
+                if (messages.isNotEmpty) {
+                  final last =
+                      messages.last; // Last item is newest in ASC order
+                  final String lastText =
+                      (last.type == 'text')
+                          ? (last.text ?? '')
+                          : (last.type == 'image' ? 'Image' : 'Document');
+
+                  merged = merged.copyWith(
+                    lastMessage: lastText,
+                    timeLabel: last.timeLabel,
+                  );
+                }
+
+                threads[idx] = merged;
+                threads.refresh();
               }
-
-              // Absolute Truth: If we have messages, the last one is the REAL last message
-              if (messages.isNotEmpty) {
-                final last = messages.last;
-                final String lastText =
-                    (last.type == 'text')
-                        ? (last.text ?? '')
-                        : (last.type == 'image' ? 'Image' : 'Document');
-
-                merged = merged.copyWith(
-                  lastMessage: lastText,
-                  timeLabel: last.timeLabel,
-                );
-              }
-
-              threads[idx] = merged;
-              threads.refresh();
-            }
-          } catch (_) {}
+            } catch (_) {}
+          }
         }
       }
     } finally {
       isFetchingMessages.value = false;
+      isLoadingMoreMessages.value = false;
     }
   }
 

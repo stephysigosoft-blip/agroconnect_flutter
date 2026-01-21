@@ -467,6 +467,54 @@
   "confirmOrder": "Confirm Order",
   "confirmOrderMessage": "Are you sure you want to place this order?",
   "orderPlacedSuccessfully": "Order placed successfully",
-  "orderCheckout": "Order Checkout"
+  "orderCheckout": "Order Checkout",
+  "statusPendingPayment": "Pending Payment",
+  "statusDeliveryPending": "Delivery Pending",
+  "statusWaitingForDelivery": "Waiting for Delivery",
+  "statusDispatched": "Dispatched",
+  "statusWaitingForDeliveryComplete": "Waiting for Delivery complete",
+  "statusPaymentReceived": "Payment Received",
+  "statusCompleted": "Completed",
+  "statusAwaitingPayment": "Awaiting Payment",
+  "statusOrderPlaced": "Order Placed",
+  "invoiceTitle": "Invoice",
+  "expectedDelivery": "Expected delivery",
+  "priceLabel": "Price",
+  "quantityLabel": "Quantity",
+  "transportCostLabel": "Transport cost",
+  "orderConfirmedSuccess": "Order confirmed successfully",
+  "orderConfirmedFailed": "Failed to confirm order",
+  "orderMarkedReceived": "Order marked as received",
+  "orderMarkedReceivedFailed": "Failed to mark as received",
+  "orderDispatchedSuccess": "Order dispatched successfully",
+  "orderDispatchedFailed": "Failed to dispatch order",
+  "disputeSubmittedSuccess": "Dispute submitted successfully",
+  "disputeSubmittedFailed": "Failed to submit dispute",
+  "invoiceDetailsTitle": "Invoice Details",
+  "orderDetailsTitle": "Order Details",
+  "productImageTitle": "Product Image",
+  "couldNotFindOrderDetails": "Could not find order details for invoice #{id}",
+  "@couldNotFindOrderDetails": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "disputeNote2": "You can report an issue if the product is damaged.",
+  "disputeNote3": "Upload clear images as evidence.",
+  "disputeNote4": "The support team will review your request shortly.",
+  "saimpexAgro": "SAIMPEX AGRO",
+  "loadMore": "Load More",
+  "unitKg": "Kg",
+  "currencyMru": "MRU",
+  "fileExtensionPdf": ".pdf",
+  "paymentRule1": "Invoice will be cancelled automatically if the buyer does not confirm within 48 hours.",
+  "paymentRule2": "Dispute must be raised within 72 hours.",
+  "paymentRule3": "Cras dapibus est suscipit accumsan sollicitudin.",
+  "paymentRule4": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+  "paymentRule5": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+  "paymentRule6": "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+  "statusPendingPayment": "Pending Payment"
 }
 

@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../services/api_service.dart';
 import '../utils/invoice_pdf_helper.dart';
 import 'chat_controller.dart';
+import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 
 class OrdersController extends GetxController {
   final RxList<InvoiceRecord> boughtOrders = <InvoiceRecord>[].obs;
@@ -294,6 +295,7 @@ class OrdersController extends GetxController {
   Future<void> placeOrder(String orderId) async {
     try {
       isLoading.value = true;
+      final l10n = AppLocalizations.of(Get.context!)!;
       debugPrint('Confirming order for ID: $orderId');
 
       final apiService = Get.find<ApiService>();
@@ -302,8 +304,8 @@ class OrdersController extends GetxController {
       if (response != null && response['status'] == true) {
         Get.back(); // Close summary screen
         Get.snackbar(
-          'Success',
-          response['message']?.toString() ?? 'Order confirmed successfully',
+          l10n.success,
+          l10n.orderConfirmedSuccess,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
@@ -313,13 +315,9 @@ class OrdersController extends GetxController {
         // Refresh orders list to reflect changes
         fetchBoughtOrders();
       } else {
-        String errMsg = 'Failed to confirm order';
-        if (response != null && response['message'] != null) {
-          errMsg = response['message'].toString();
-        }
         Get.snackbar(
-          'Error',
-          errMsg,
+          l10n.error,
+          l10n.orderConfirmedFailed,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
@@ -327,8 +325,9 @@ class OrdersController extends GetxController {
         );
       }
     } catch (e) {
+      final l10n = AppLocalizations.of(Get.context!)!;
       Get.snackbar(
-        'Error',
+        l10n.error,
         'An unexpected error occurred',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
@@ -348,6 +347,7 @@ class OrdersController extends GetxController {
   }) async {
     try {
       isLoading.value = true;
+      final l10n = AppLocalizations.of(Get.context!)!;
       final apiService = Get.find<ApiService>();
       final response = await apiService.disputeOrder(
         orderId: orderId,
@@ -359,21 +359,16 @@ class OrdersController extends GetxController {
       if (response != null && response['status'] == true) {
         Get.back(); // Close DisputeScreen
         Get.snackbar(
-          'Success',
-          response['message']?.toString() ?? 'Dispute submitted successfully',
+          l10n.success,
+          l10n.disputeSubmittedSuccess,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
         );
-      } else {
-        String errMsg = 'Failed to submit dispute';
-        if (response != null && response['message'] != null) {
-          errMsg = response['message'].toString();
-        }
         Get.snackbar(
-          'Error',
-          errMsg,
+          l10n.error,
+          l10n.disputeSubmittedFailed,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
@@ -381,8 +376,9 @@ class OrdersController extends GetxController {
         );
       }
     } catch (e) {
+      final l10n = AppLocalizations.of(Get.context!)!;
       Get.snackbar(
-        'Error',
+        l10n.error,
         'An unexpected error occurred',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
@@ -400,6 +396,7 @@ class OrdersController extends GetxController {
   }) async {
     try {
       isLoading.value = true;
+      final l10n = AppLocalizations.of(Get.context!)!;
       final apiService = Get.find<ApiService>();
       final response = await apiService.markAsReceived(
         orderId: orderId,
@@ -410,20 +407,20 @@ class OrdersController extends GetxController {
         Get.back(); // Close BottomSheet
         fetchBoughtOrders(); // Refresh list to update UI/remove button
         Get.snackbar(
-          'Success',
-          response['message']?.toString() ?? 'Order marked as received',
+          l10n.success,
+          l10n.orderMarkedReceived,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
         );
       } else {
-        String errMsg = 'Failed to mark as received';
+        String errMsg = l10n.orderMarkedReceivedFailed;
         if (response != null && response['message'] != null) {
           errMsg = response['message'].toString();
         }
         Get.snackbar(
-          'Error',
+          l10n.error,
           errMsg,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
@@ -451,6 +448,8 @@ class OrdersController extends GetxController {
   }) async {
     try {
       isLoading.value = true;
+      final l10n = AppLocalizations.of(Get.context!)!;
+
       final apiService = Get.find<ApiService>();
       final response = await apiService.dispatchOrder(
         orderId: orderId,
@@ -461,20 +460,20 @@ class OrdersController extends GetxController {
         Get.back(); // Close BottomSheet
         fetchSellerOrders(); // Refresh list to update UI/remove button
         Get.snackbar(
-          'Success',
-          response['message']?.toString() ?? 'Order dispatched successfully',
+          l10n.success,
+          l10n.orderDispatchedSuccess,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
         );
       } else {
-        String errMsg = 'Failed to dispatch order';
+        String errMsg = l10n.orderDispatchedFailed;
         if (response != null && response['message'] != null) {
           errMsg = response['message'].toString();
         }
         Get.snackbar(
-          'Error',
+          l10n.error,
           errMsg,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
@@ -506,7 +505,9 @@ class OrdersController extends GetxController {
     try {
       isLoading.value = true;
       final apiService = Get.find<ApiService>();
+
       await apiService.getViewInvoice(actualId);
+      final l10n = AppLocalizations.of(Get.context!)!;
 
       // We use the invoiceRecord (passed from screen) OR find it in our lists
       InvoiceRecord? record = invoiceRecord;
@@ -527,8 +528,8 @@ class OrdersController extends GetxController {
 
       if (record == null) {
         Get.snackbar(
-          'Error',
-          'Could not find order details for invoice #$actualId',
+          l10n.error,
+          l10n.couldNotFindOrderDetails(actualId),
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
@@ -556,9 +557,9 @@ class OrdersController extends GetxController {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Invoice Details',
-                      style: TextStyle(
+                    Text(
+                      l10n.invoiceDetailsTitle,
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -586,21 +587,27 @@ class OrdersController extends GetxController {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Order Details:',
-                          style: TextStyle(
+                        Text(
+                          l10n.orderDetailsTitle,
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
                         ),
                         const SizedBox(height: 12),
-                        _buildDetailRow('Product:', productName),
-                        _buildDetailRow('Quantity:', '$quantity Kg'),
-                        _buildDetailRow('Price:', '$totalAmount MRU'),
+                        _buildDetailRow(l10n.productName, productName),
+                        _buildDetailRow(
+                          l10n.quantity,
+                          '$quantity ${l10n.unitKg}',
+                        ),
+                        _buildDetailRow(
+                          l10n.price,
+                          '$totalAmount ${l10n.currencyMru}',
+                        ),
                         const SizedBox(height: 16),
-                        const Text(
-                          'Product Image:',
-                          style: TextStyle(
+                        Text(
+                          l10n.productImageTitle,
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),

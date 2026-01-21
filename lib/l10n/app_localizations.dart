@@ -1881,6 +1881,246 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Order Checkout'**
   String get orderCheckout;
+
+  /// No description provided for @statusPendingPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Payment'**
+  String get statusPendingPayment;
+
+  /// No description provided for @statusDeliveryPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery Pending'**
+  String get statusDeliveryPending;
+
+  /// No description provided for @statusWaitingForDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Delivery'**
+  String get statusWaitingForDelivery;
+
+  /// No description provided for @statusDispatched.
+  ///
+  /// In en, this message translates to:
+  /// **'Dispatched'**
+  String get statusDispatched;
+
+  /// No description provided for @statusWaitingForDeliveryComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Delivery complete'**
+  String get statusWaitingForDeliveryComplete;
+
+  /// No description provided for @statusPaymentReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Received'**
+  String get statusPaymentReceived;
+
+  /// No description provided for @statusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get statusCompleted;
+
+  /// No description provided for @statusAwaitingPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting Payment'**
+  String get statusAwaitingPayment;
+
+  /// No description provided for @statusOrderPlaced.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Placed'**
+  String get statusOrderPlaced;
+
+  /// No description provided for @invoiceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice'**
+  String get invoiceTitle;
+
+  /// No description provided for @expectedDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected delivery'**
+  String get expectedDelivery;
+
+  /// No description provided for @priceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get priceLabel;
+
+  /// No description provided for @quantityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity'**
+  String get quantityLabel;
+
+  /// No description provided for @transportCostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Transport cost'**
+  String get transportCostLabel;
+
+  /// No description provided for @orderConfirmedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Order confirmed successfully'**
+  String get orderConfirmedSuccess;
+
+  /// No description provided for @orderConfirmedFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to confirm order'**
+  String get orderConfirmedFailed;
+
+  /// No description provided for @orderMarkedReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Order marked as received'**
+  String get orderMarkedReceived;
+
+  /// No description provided for @orderMarkedReceivedFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to mark as received'**
+  String get orderMarkedReceivedFailed;
+
+  /// No description provided for @orderDispatchedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Order dispatched successfully'**
+  String get orderDispatchedSuccess;
+
+  /// No description provided for @orderDispatchedFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to dispatch order'**
+  String get orderDispatchedFailed;
+
+  /// No description provided for @disputeSubmittedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Dispute submitted successfully'**
+  String get disputeSubmittedSuccess;
+
+  /// No description provided for @disputeSubmittedFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit dispute'**
+  String get disputeSubmittedFailed;
+
+  /// No description provided for @invoiceDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice Details'**
+  String get invoiceDetailsTitle;
+
+  /// No description provided for @orderDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Order Details'**
+  String get orderDetailsTitle;
+
+  /// No description provided for @productImageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Product Image'**
+  String get productImageTitle;
+
+  /// No description provided for @couldNotFindOrderDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not find order details for invoice #{id}'**
+  String couldNotFindOrderDetails(String id);
+
+  /// No description provided for @disputeNote2.
+  ///
+  /// In en, this message translates to:
+  /// **'You can report an issue if the product is damaged.'**
+  String get disputeNote2;
+
+  /// No description provided for @disputeNote3.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload clear images as evidence.'**
+  String get disputeNote3;
+
+  /// No description provided for @disputeNote4.
+  ///
+  /// In en, this message translates to:
+  /// **'The support team will review your request shortly.'**
+  String get disputeNote4;
+
+  /// No description provided for @saimpexAgro.
+  ///
+  /// In en, this message translates to:
+  /// **'SAIMPEX AGRO'**
+  String get saimpexAgro;
+
+  /// No description provided for @loadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load More'**
+  String get loadMore;
+
+  /// No description provided for @unitKg.
+  ///
+  /// In en, this message translates to:
+  /// **'Kg'**
+  String get unitKg;
+
+  /// No description provided for @currencyMru.
+  ///
+  /// In en, this message translates to:
+  /// **'MRU'**
+  String get currencyMru;
+
+  /// No description provided for @fileExtensionPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'.pdf'**
+  String get fileExtensionPdf;
+
+  /// No description provided for @paymentRule1.
+  ///
+  /// In en, this message translates to:
+  /// **'Invoice will be cancelled automatically if the buyer does not confirm within 48 hours.'**
+  String get paymentRule1;
+
+  /// No description provided for @paymentRule2.
+  ///
+  /// In en, this message translates to:
+  /// **'Dispute must be raised within 72 hours.'**
+  String get paymentRule2;
+
+  /// No description provided for @paymentRule3.
+  ///
+  /// In en, this message translates to:
+  /// **'Cras dapibus est suscipit accumsan sollicitudin.'**
+  String get paymentRule3;
+
+  /// No description provided for @paymentRule4.
+  ///
+  /// In en, this message translates to:
+  /// **'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'**
+  String get paymentRule4;
+
+  /// No description provided for @paymentRule5.
+  ///
+  /// In en, this message translates to:
+  /// **'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'**
+  String get paymentRule5;
+
+  /// No description provided for @paymentRule6.
+  ///
+  /// In en, this message translates to:
+  /// **'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'**
+  String get paymentRule6;
 }
 
 class _AppLocalizationsDelegate

@@ -825,10 +825,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               final apiService = Get.find<ApiService>();
                               await apiService.logout();
 
-                              // Clear local storage regardless of API response
+                              // Selective clear: Remove only auth and user-specific session data
                               final prefs =
                                   await SharedPreferences.getInstance();
-                              await prefs.clear();
+                              // This preserves global settings like language and user-prefixed read status
+                              await prefs.remove('auth_token');
+                              await prefs.remove('user_id');
+                              await prefs.remove('user_name');
+                              await prefs.remove('user_phone');
+                              await prefs.remove('user_country_code');
+                              await prefs.remove('user_image');
 
                               // Navigate to language selection screen
                               Get.offAllNamed('/languageSelection');

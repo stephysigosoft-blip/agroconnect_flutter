@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import '../models/product.dart';
@@ -34,6 +35,9 @@ class HomeController extends GetxController {
 
   /// Promotional banner current page index
   final RxInt currentBannerIndex = 0.obs;
+
+  /// Share the same controller to prevent recreation/flicker
+  final PageController bannerPageController = PageController();
 
   void onBottomNavChanged(int index) {
     currentIndex.value = index;
@@ -350,6 +354,7 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     tabController.dispose();
+    bannerPageController.dispose();
     super.onClose();
   }
 }

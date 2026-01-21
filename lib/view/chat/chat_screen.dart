@@ -75,18 +75,39 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     }
 
-    // Auto-scroll to bottom on new messages
+    // Scroll listener for pagination
+    _scrollController.addListener(() {
+      if (_scrollController.hasClients) {
+        // final maxScroll = _scrollController.position.maxScrollExtent;
+        final currentScroll = _scrollController.position.pixels;
+        // If near top (minScrollExtent, which is 0), load more (older messages)
+        if (currentScroll <= 100 &&
+            !_chatController.isLoadingMoreMessages.value &&
+            _chatController.hasMoreMessages.value) {
+          _chatController.fetchMessages(thread!.id, loadMore: true);
+        }
+      }
+    });
+
+    // Auto-scroll to bottom on new messages (only if we are near bottom or fresh load)
     _scrollWorker = ever(_chatController.messages, (_) {
       if (_scrollController.hasClients) {
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted && _scrollController.hasClients) {
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          }
-        });
+        // Only auto-scroll if we are NOT loading history (page 1) or user is at bottom
+        // But since we can't easily distinguish 'loadMore' event here uniquely,
+        // we check if we are logically at the "newest" part or if it's a fresh load (page==1).
+        // For simplicity, if page > 1, we might NOT want to auto-scroll to bottom.
+        // However, 'ever' triggers on ANY change.
+        if (_chatController.messagePage.value == 1) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted && _scrollController.hasClients) {
+              _scrollController.animateTo(
+                _scrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
+          });
+        }
       }
     });
   }
@@ -157,10 +178,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(height: 4),
                 if (data != null) ...[
-                  _summaryRow(l10n.price, '${data.price} MRU'),
-                  _summaryRow(l10n.quantity, '${data.quantity} Kg'),
-                  _summaryRow(l10n.transport, '${data.transportCost} MRU'),
-                  _summaryRow(l10n.delivery, '${data.delivery} days'),
+                  _summaryRow(l10n.price, '${data.price} ${l10n.currencyMru}'),
+                  _summaryRow(l10n.quantity, '${data.quantity} ${l10n.unitKg}'),
+                  _summaryRow(
+                    l10n.transport,
+                    '${data.transportCost} ${l10n.currencyMru}',
+                  ),
+                  _summaryRow(l10n.delivery, '${data.delivery} ${l10n.days}'),
                 ],
               ],
             ),
@@ -218,7 +242,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     }
                   },
                   child: Text(
-                    '${l10n.invoice}.pdf',
+                    '${l10n.invoice}${l10n.fileExtensionPdf}',
                     style: const TextStyle(
                       fontSize: 12,
                       decoration: TextDecoration.underline,
@@ -256,6 +280,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.dispose();
     _scrollController.dispose();
     _scrollWorker?.dispose();
+    _chatController.onChatScreenClosed();
     super.dispose();
   }
 
@@ -657,7 +682,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 totalAmount: total.toStringAsFixed(2),
                                 buyerName: '',
                                 invoiceDate: DateTime.now().toString(),
-                                statusLabel: 'Pending Payment',
+                                statusLabel: l10n.statusPendingPayment,
                                 statusColor: const Color(0xFFD4A017),
                                 isCompleted: false,
                                 pdfPath: '',
@@ -733,7 +758,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                             : '0',
                                     buyerName: '',
                                     invoiceDate: DateTime.now().toString(),
-                                    statusLabel: 'Pending Payment',
+                                    statusLabel: l10n.statusPendingPayment,
                                     statusColor: const Color(0xFFD4A017),
                                     isCompleted: false,
                                     pdfPath: '',
@@ -1119,24 +1144,12 @@ class _ChatScreenState extends State<ChatScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildRuleBullet(
-                              'Invoice will be cancelled automatically if the buyer does not confirm within 48 hours.',
-                            ),
-                            _buildRuleBullet(
-                              'Dispute must be raised within 72 hours.',
-                            ),
-                            _buildRuleBullet(
-                              'Cras dapibus est suscipit accumsan sollicitudin.',
-                            ),
-                            _buildRuleBullet(
-                              'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-                            ),
-                            _buildRuleBullet(
-                              'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-                            ),
-                            _buildRuleBullet(
-                              'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-                            ),
+                            _buildRuleBullet(l10n.paymentRule1),
+                            _buildRuleBullet(l10n.paymentRule2),
+                            _buildRuleBullet(l10n.paymentRule3),
+                            _buildRuleBullet(l10n.paymentRule4),
+                            _buildRuleBullet(l10n.paymentRule5),
+                            _buildRuleBullet(l10n.paymentRule6),
                             const SizedBox(height: 20),
                             Row(
                               children: [

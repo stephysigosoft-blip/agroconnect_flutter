@@ -944,4 +944,133 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get orderCheckout => 'Order Checkout';
+
+  @override
+  String get statusPendingPayment => 'Pending Payment';
+
+  @override
+  String get statusDeliveryPending => 'Delivery Pending';
+
+  @override
+  String get statusWaitingForDelivery => 'Waiting for Delivery';
+
+  @override
+  String get statusDispatched => 'Dispatched';
+
+  @override
+  String get statusWaitingForDeliveryComplete =>
+      'Waiting for Delivery complete';
+
+  @override
+  String get statusPaymentReceived => 'Payment Received';
+
+  @override
+  String get statusCompleted => 'Completed';
+
+  @override
+  String get statusAwaitingPayment => 'Awaiting Payment';
+
+  @override
+  String get statusOrderPlaced => 'Order Placed';
+
+  @override
+  String get invoiceTitle => 'Invoice';
+
+  @override
+  String get expectedDelivery => 'Expected delivery';
+
+  @override
+  String get priceLabel => 'Price';
+
+  @override
+  String get quantityLabel => 'Quantity';
+
+  @override
+  String get transportCostLabel => 'Transport cost';
+
+  @override
+  String get orderConfirmedSuccess => 'Order confirmed successfully';
+
+  @override
+  String get orderConfirmedFailed => 'Failed to confirm order';
+
+  @override
+  String get orderMarkedReceived => 'Order marked as received';
+
+  @override
+  String get orderMarkedReceivedFailed => 'Failed to mark as received';
+
+  @override
+  String get orderDispatchedSuccess => 'Order dispatched successfully';
+
+  @override
+  String get orderDispatchedFailed => 'Failed to dispatch order';
+
+  @override
+  String get disputeSubmittedSuccess => 'Dispute submitted successfully';
+
+  @override
+  String get disputeSubmittedFailed => 'Failed to submit dispute';
+
+  @override
+  String get invoiceDetailsTitle => 'Invoice Details';
+
+  @override
+  String get orderDetailsTitle => 'Order Details';
+
+  @override
+  String get productImageTitle => 'Product Image';
+
+  @override
+  String couldNotFindOrderDetails(String id) {
+    return 'Could not find order details for invoice #$id';
+  }
+
+  @override
+  String get disputeNote2 =>
+      'You can report an issue if the product is damaged.';
+
+  @override
+  String get disputeNote3 => 'Upload clear images as evidence.';
+
+  @override
+  String get disputeNote4 =>
+      'The support team will review your request shortly.';
+
+  @override
+  String get saimpexAgro => 'SAIMPEX AGRO';
+
+  @override
+  String get loadMore => 'Load More';
+
+  @override
+  String get unitKg => 'Kg';
+
+  @override
+  String get currencyMru => 'MRU';
+
+  @override
+  String get fileExtensionPdf => '.pdf';
+
+  @override
+  String get paymentRule1 =>
+      'Invoice will be cancelled automatically if the buyer does not confirm within 48 hours.';
+
+  @override
+  String get paymentRule2 => 'Dispute must be raised within 72 hours.';
+
+  @override
+  String get paymentRule3 => 'Cras dapibus est suscipit accumsan sollicitudin.';
+
+  @override
+  String get paymentRule4 =>
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit.';
+
+  @override
+  String get paymentRule5 =>
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit.';
+
+  @override
+  String get paymentRule6 =>
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit.';
 }

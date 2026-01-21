@@ -956,5 +956,135 @@ class AppLocalizationsFr extends AppLocalizations {
   String get orderPlacedSuccessfully => 'Order placed successfully';
 
   @override
-  String get orderCheckout => 'Order Checkout';
+  String get orderCheckout => 'Paiement de la commande';
+
+  @override
+  String get statusPendingPayment => 'En attente de paiement';
+
+  @override
+  String get statusDeliveryPending => 'Livraison en attente';
+
+  @override
+  String get statusWaitingForDelivery => 'En attente de livraison';
+
+  @override
+  String get statusDispatched => 'Expédié';
+
+  @override
+  String get statusWaitingForDeliveryComplete =>
+      'En attente de la fin de la livraison';
+
+  @override
+  String get statusPaymentReceived => 'Paiement reçu';
+
+  @override
+  String get statusCompleted => 'Terminé';
+
+  @override
+  String get statusAwaitingPayment => 'En attente de paiement';
+
+  @override
+  String get statusOrderPlaced => 'Commande passée';
+
+  @override
+  String get invoiceTitle => 'Facture';
+
+  @override
+  String get expectedDelivery => 'Livraison prévue';
+
+  @override
+  String get priceLabel => 'Prix';
+
+  @override
+  String get quantityLabel => 'Quantité';
+
+  @override
+  String get transportCostLabel => 'Coût du transport';
+
+  @override
+  String get orderConfirmedSuccess => 'Commande confirmée avec succès';
+
+  @override
+  String get orderConfirmedFailed => 'Échec de la confirmation de la commande';
+
+  @override
+  String get orderMarkedReceived => 'Commande marquée comme reçue';
+
+  @override
+  String get orderMarkedReceivedFailed => 'Échec du marquage comme reçu';
+
+  @override
+  String get orderDispatchedSuccess => 'Commande expédiée avec succès';
+
+  @override
+  String get orderDispatchedFailed => 'Échec de l\'expédition de la commande';
+
+  @override
+  String get disputeSubmittedSuccess => 'Litige soumis avec succès';
+
+  @override
+  String get disputeSubmittedFailed => 'Échec de la soumission du litige';
+
+  @override
+  String get invoiceDetailsTitle => 'Détails de la facture';
+
+  @override
+  String get orderDetailsTitle => 'Détails de la commande';
+
+  @override
+  String get productImageTitle => 'Image du produit';
+
+  @override
+  String couldNotFindOrderDetails(String id) {
+    return 'Impossible de trouver les détails de la commande pour la facture #$id';
+  }
+
+  @override
+  String get disputeNote2 =>
+      'Vous pouvez signaler un problème si le produit est endommagé.';
+
+  @override
+  String get disputeNote3 => 'Téléchargez des images claires comme preuve.';
+
+  @override
+  String get disputeNote4 =>
+      'L\'équipe de support examinera votre demande sous peu.';
+
+  @override
+  String get saimpexAgro => 'SAIMPEX AGRO';
+
+  @override
+  String get loadMore => 'Charger plus';
+
+  @override
+  String get unitKg => 'Kg';
+
+  @override
+  String get currencyMru => 'MRU';
+
+  @override
+  String get fileExtensionPdf => '.pdf';
+
+  @override
+  String get paymentRule1 =>
+      'La facture sera annulée automatiquement si l\'acheteur ne confirme pas dans les 48 heures.';
+
+  @override
+  String get paymentRule2 => 'Le litige doit être soulevé dans les 72 heures.';
+
+  @override
+  String get paymentRule3 =>
+      'Cras dapibus est suscipit accumsan sollicitudin (Texte indicatif).';
+
+  @override
+  String get paymentRule4 =>
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. (Texte indicatif)';
+
+  @override
+  String get paymentRule5 =>
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. (Texte indicatif)';
+
+  @override
+  String get paymentRule6 =>
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. (Texte indicatif)';
 }
