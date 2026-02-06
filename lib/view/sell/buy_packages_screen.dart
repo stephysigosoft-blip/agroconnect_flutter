@@ -98,11 +98,11 @@ class BuyPackagesScreen extends StatelessWidget {
                   children: [
                     ...controller.allPackages.map((package) {
                       final l10n = AppLocalizations.of(context)!;
-                      final ads = package['total_ads']?.toString() ?? '0';
+                      final ads = package['no_ads']?.toString() ?? '0';
                       final validity = l10n.validityLabel(
-                        (package['validity_days'] ?? '0').toString(),
+                        (package['duration'] ?? '0').toString(),
                       );
-                      final price = '${package['price'] ?? '0'} MRU';
+                      final price = '${package['amount'] ?? '0'} MRU';
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),

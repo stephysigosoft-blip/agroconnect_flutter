@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 
 class SnackBarHelper {
   static const Color successColor = Color(0xFF1B834F);
-  static const Color errorColor = Colors.red;
+  static const Color errorColor = Colors.redAccent;
 
   static void showSuccess(String title, String message) {
     Get.snackbar(
@@ -14,7 +14,7 @@ class SnackBarHelper {
       colorText: Colors.white,
       margin: const EdgeInsets.all(16),
       borderRadius: 12,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
     );
   }
 
@@ -27,7 +27,7 @@ class SnackBarHelper {
       colorText: Colors.white,
       margin: const EdgeInsets.all(16),
       borderRadius: 12,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
     );
   }
 }

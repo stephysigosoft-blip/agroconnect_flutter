@@ -27,7 +27,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginOrSignUp => 'Login or Sign up';
 
   @override
-  String get enterWhatsappNumber => 'Enter your whatsapp number';
+  String get enterWhatsappNumber => 'Enter your WhatsApp number';
 
   @override
   String get otpVerification => 'OTP Verification';
@@ -179,7 +179,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noDescription => 'No description available for this product.';
 
   @override
-  String get yourOfferPrice => 'Your Offer Price (MRU)';
+  String get yourOfferPrice => 'Your Offer Price (MRU/Kg)';
 
   @override
   String get success => 'Success';
@@ -813,7 +813,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quantityRange => 'Quantity Range';
 
   @override
-  String get anyQuantity => 'Any quantity';
+  String get anyQuantity => 'Any Quantity';
 
   @override
   String get priceRangeLabel => 'Price Range';
@@ -828,7 +828,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get relevance => 'Relevance';
 
   @override
-  String get recentlyPosted => 'Recently posted';
+  String get recentlyPosted => 'Recently Posted';
 
   @override
   String get newestFirst => 'Newest First';

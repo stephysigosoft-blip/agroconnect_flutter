@@ -156,6 +156,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       return;
     }
@@ -166,6 +168,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       return;
     }
@@ -177,6 +181,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       return;
     }
@@ -223,10 +229,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           'Success',
           'Profile Updated Successfully',
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
+          backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
-          margin: const EdgeInsets.all(10),
-          borderRadius: 10,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       } else {
         String errorMsg = 'Failed to update profile';
@@ -240,10 +246,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           'Error',
           errorMsg,
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.redAccent,
           colorText: Colors.white,
-          margin: const EdgeInsets.all(10),
-          borderRadius: 10,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       }
     } catch (e) {
@@ -251,10 +257,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'Error',
         'An unexpected error occurred',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.redAccent,
         colorText: Colors.white,
-        margin: const EdgeInsets.all(10),
-        borderRadius: 10,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
     }
   }

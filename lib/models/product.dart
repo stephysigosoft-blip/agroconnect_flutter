@@ -13,6 +13,7 @@ class Product {
   final String status;
   final String sellerImage;
   final String sellerId;
+  final int? categoryId;
 
   // Localized fields
   final Map<String, String> _nameMap;
@@ -34,6 +35,7 @@ class Product {
     String sellerName = '',
     this.sellerImage = '',
     this.sellerId = '',
+    this.categoryId,
     Map<String, String>? nameMap,
     Map<String, String>? descriptionMap,
     Map<String, String>? sellerNameMap,
@@ -72,17 +74,39 @@ class Product {
   }
 
   factory Product.fromJson(Map<String, dynamic> json) {
-    final root = json.containsKey('product') ? json['product'] : json;
+    final Map<String, dynamic> root =
+        (json['product'] is Map)
+            ? Map<String, dynamic>.from(json['product'])
+            : json;
 
     final id = (root['id'] ?? '').toString();
 
-    // Collect all localized names
+    // Collect all localized names (checking both 'name' and 'title' variants)
     final Map<String, String> nameMap = {};
-    if (root['name_en'] != null) nameMap['en'] = root['name_en'].toString();
-    if (root['name_ar'] != null) nameMap['ar'] = root['name_ar'].toString();
-    if (root['name_fr'] != null) nameMap['fr'] = root['name_fr'].toString();
-    if (root['name'] != null && nameMap.isEmpty)
-      nameMap['en'] = root['name'].toString();
+    if (root['name_en'] != null)
+      nameMap['en'] = root['name_en'].toString();
+    else if (root['title_en'] != null)
+      nameMap['en'] = root['title_en'].toString();
+    else if (root['title'] != null &&
+        (root['title'] is String || root['title'] is num))
+      nameMap['en'] = root['title'].toString();
+
+    if (root['name_ar'] != null)
+      nameMap['ar'] = root['name_ar'].toString();
+    else if (root['title_ar'] != null)
+      nameMap['ar'] = root['title_ar'].toString();
+
+    if (root['name_fr'] != null)
+      nameMap['fr'] = root['name_fr'].toString();
+    else if (root['title_fr'] != null)
+      nameMap['fr'] = root['title_fr'].toString();
+
+    if (nameMap.isEmpty) {
+      if (root['name'] != null)
+        nameMap['en'] = root['name'].toString();
+      else if (root['title'] != null)
+        nameMap['en'] = root['title'].toString();
+    }
 
     // Collect all localized descriptions
     final Map<String, String> descriptionMap = {};
@@ -96,12 +120,90 @@ class Product {
       descriptionMap['en'] = root['description'].toString();
 
     // Handle nested category or direct field
-    String category = 'General';
+    String category = 'Category';
+    int? catId;
+
     if (root['category'] is Map) {
-      category =
-          root['category']['name_en'] ?? root['category']['name'] ?? 'General';
+      final catMap = root['category'];
+      catId = int.tryParse(catMap['id'].toString());
+      final langCode = Get.locale?.languageCode ?? 'en';
+      if (langCode == 'ar') {
+        category =
+            catMap['name_ar']?.toString() ??
+            catMap['name_en']?.toString() ??
+            catMap['name']?.toString() ??
+            '';
+      } else if (langCode == 'fr') {
+        category =
+            catMap['name_fr']?.toString() ??
+            catMap['name_en']?.toString() ??
+            catMap['name']?.toString() ??
+            '';
+      } else {
+        category =
+            catMap['name_en']?.toString() ?? catMap['name']?.toString() ?? '';
+      }
     } else if (root['category_id'] != null) {
-      category = 'Category ${root['category_id']}';
+      catId = int.tryParse(root['category_id'].toString());
+    } else if (root['categories_id'] != null) {
+      catId = int.tryParse(root['categories_id'].toString());
+    } else if (root['cat_id'] != null) {
+      catId = int.tryParse(root['cat_id'].toString());
+    } else if (root['category'] != null && root['category'] is! Map) {
+      final val = root['category'].toString();
+      final parsed = int.tryParse(val);
+      if (parsed != null) {
+        catId = parsed;
+      } else if (val.isNotEmpty) {
+        category = val;
+      }
+    }
+
+    // Secondary Check for category name
+    if (category == 'Category' ||
+        category == 'General' ||
+        category == 'Unknown') {
+      if (root['category_name'] != null)
+        category = root['category_name'].toString();
+      else if (root['categories_name'] != null)
+        category = root['categories_name'].toString();
+    }
+
+    // Fallback if category name is empty or we only have an ID
+    if (category.isEmpty ||
+        category == 'Category' ||
+        category == 'General' ||
+        category == 'Unknown') {
+      // Smart detection based on name - but ONLY if we don't have a valid category already
+      final nameLower = (nameMap['en'] ?? '').toLowerCase();
+      if (nameLower.contains('tomato') ||
+          nameLower.contains('carrot') ||
+          nameLower.contains('vegetable') ||
+          nameLower.contains('onion')) {
+        catId ??= 2;
+        category = 'Vegetables';
+      } else if (nameLower.contains('wheat') ||
+          nameLower.contains('grain') ||
+          nameLower.contains('rice')) {
+        catId ??= 1;
+        category = 'Grains & Cereals';
+      }
+
+      if (catId != null) {
+        // Simple mapping based on known IDs if the server doesn't provide names
+        final int idInt = catId;
+        if (category == 'Category' ||
+            category == 'General' ||
+            category == 'Unknown') {
+          category = 'Category $idInt';
+        }
+      } else {
+        // Very last resort: try to find any name in the root that might be a category
+        category =
+            root['category_name']?.toString() ??
+            root['categories_name']?.toString() ??
+            'General';
+      }
     }
 
     final price =
@@ -201,6 +303,7 @@ class Product {
       sellerName: sNameMap['en'] ?? '',
       sellerImage: sImage,
       sellerId: sId,
+      categoryId: catId,
       nameMap: nameMap,
       descriptionMap: descriptionMap,
       sellerNameMap: sNameMap,

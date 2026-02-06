@@ -466,14 +466,25 @@ class ChatController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _initPusher();
-    // Load current user first, then use their ID to load user-specific read status
-    _loadCurrentUserId().then((_) {
-      _loadReadIds().then((_) {
-        _loadMyProducts();
-        fetchThreads();
-      });
-    });
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      debugPrint('🚀 [ChatController] Starting Initialization...');
+      await _initPusher();
+
+      // Sequence: ID -> Read IDs -> My Products -> Threads
+      await _loadCurrentUserId();
+      await _loadReadIds();
+
+      // Parallelize remaining non-critical startup tasks
+      await Future.wait([_loadMyProducts(), fetchThreads()]);
+
+      debugPrint('✅ [ChatController] Initialization Complete.');
+    } catch (e) {
+      debugPrint('❌ [ChatController] Initialization Error: $e');
+    }
   }
 
   Future<void> _initPusher() async {
@@ -705,8 +716,27 @@ class ChatController extends GetxController {
 
       for (var response in responses) {
         if (response != null && response['status'] == true) {
-          final List products =
-              response['data']?['products'] ?? response['data'] ?? [];
+          final dynamic data = response['data'];
+          List products = [];
+          if (data is Map) {
+            if (data.containsKey('products') && data['products'] is List) {
+              products = data['products'];
+            } else if (data.containsKey('ads')) {
+              final ads = data['ads'];
+              if (ads is Map &&
+                  ads.containsKey('data') &&
+                  ads['data'] is List) {
+                products = ads['data'];
+              } else if (ads is List) {
+                products = ads;
+              }
+            } else if (data.containsKey('data') && data['data'] is List) {
+              products = data['data'];
+            }
+          } else if (data is List) {
+            products = data;
+          }
+
           for (var item in products) {
             if (item is Map) {
               final id = (item['id'] ?? '').toString();
@@ -1387,7 +1417,15 @@ class ChatController extends GetxController {
         threads.removeWhere((t) => t.id == id);
         threads.refresh();
         Get.back();
-        Get.snackbar('Success', 'Chat deleted successfully');
+        Get.snackbar(
+          'Success',
+          'Chat deleted successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF1B834F),
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+        );
       }
     } catch (_) {}
   }

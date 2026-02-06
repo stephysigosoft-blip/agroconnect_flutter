@@ -6,6 +6,7 @@ import '../../controllers/product_controller.dart';
 import '../../controllers/chat_controller.dart';
 import '../../controllers/wishlist_controller.dart';
 import '../../models/product.dart';
+import '../../services/api_service.dart';
 
 class ProductDetailScreen extends StatelessWidget {
   const ProductDetailScreen({super.key});
@@ -54,6 +55,8 @@ class ProductDetailScreen extends StatelessWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.fetchProductDetails(product.id);
     });
+
+    final ApiService apiService = Get.find<ApiService>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -107,7 +110,7 @@ class ProductDetailScreen extends StatelessWidget {
                   child: Container(
                     height: 35,
                     width: 35,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Color(0xFF1B834F),
                       shape: BoxShape.circle,
                     ),
@@ -123,133 +126,241 @@ class ProductDetailScreen extends StatelessWidget {
           }),
         ],
       ),
-      body: Obx(() {
-        if (controller.isFetchingDetails.value &&
-            controller.currentProductDetails.value == null) {
-          return const Center(child: CircularProgressIndicator());
-        }
+      body: FutureBuilder<bool>(
+        future: apiService.isGuest(),
+        builder: (context, snapshot) {
+          final isGuest = snapshot.data ?? false;
+          return Obx(() {
+            if (controller.isFetchingDetails.value &&
+                controller.currentProductDetails.value == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-        final p = controller.currentProductDetails.value ?? product;
+            final p = controller.currentProductDetails.value ?? product;
 
-        final related =
-            controller.allProducts
-                .where((item) => item.id != p.id && item.category == p.category)
-                .toList();
+            final related =
+                controller.allProducts
+                    .where(
+                      (item) => item.id != p.id && item.category == p.category,
+                    )
+                    .toList();
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-              _buildImageCarousel(p),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildMainInfo(context, p),
-              ),
-              const SizedBox(height: 16),
-              if (showCancel)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
+            return SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: GestureDetector(
+                onTap: isGuest ? () => _showLoginRequiredDialog(context) : null,
+                behavior: HitTestBehavior.opaque,
+                child: IgnorePointer(
+                  ignoring: isGuest,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Get.offAllNamed('/home'),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                            side: const BorderSide(color: Color(0xFF1B834F)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
+                      const SizedBox(height: 10),
+                      _buildImageCarousel(p),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildMainInfo(context, p),
+                      ),
+                      const SizedBox(height: 16),
+                      if (showCancel)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => Get.offAllNamed('/home'),
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size.fromHeight(48),
+                                    side: const BorderSide(
+                                      color: Color(0xFF1B834F),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Back',
+                                    style: TextStyle(
+                                      color: Color(0xFF1B834F),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () => Get.offAllNamed('/home'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1B834F),
+                                    minimumSize: const Size.fromHeight(48),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    l10n.cancel,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          child: const Text(
-                            'Back',
-                            style: TextStyle(
-                              color: Color(0xFF1B834F),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: _buildMakeDealButton(p, l10n),
+                        ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildDescription(p, l10n),
+                      ),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildPostedBy(p, l10n),
+                      ),
+                      const SizedBox(height: 24),
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9F9F9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: _buildAdMeta(context, controller, p),
+                      ),
+                      const SizedBox(height: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          l10n.relatedAds,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => Get.offAllNamed('/home'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1B834F),
-                            minimumSize: const Size.fromHeight(48),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: Text(
-                            l10n.cancel,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildRelatedAds(
+                          context,
+                          related.isEmpty ? controller.allProducts : related,
                         ),
                       ),
                     ],
                   ),
-                )
-              else
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildMakeDealButton(p, l10n),
                 ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildDescription(p, l10n),
               ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildPostedBy(p, l10n),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9F9F9),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: _buildAdMeta(context, controller, p),
-              ),
-              const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  l10n.relatedAds,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+            );
+          });
+        },
+      ),
+    );
+  }
+
+  void _showLoginRequiredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.lock_outline,
+                    size: 40,
+                    color: Colors.orangeAccent,
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildRelatedAds(
-                  context,
-                  related.isEmpty ? controller.allProducts : related,
+                const SizedBox(height: 24),
+                const Text(
+                  'Login Required',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                const Text(
+                  'please login to access the application',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Get.back(); // Close dialog
+                      Get.offAllNamed('/languageSelection');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1B834F),
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Login',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Get.back(),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
-      }),
+      },
     );
   }
 
@@ -436,7 +547,11 @@ class ProductDetailScreen extends StatelessWidget {
         side: const BorderSide(color: Color(0xFF1B834F)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
-      icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF1B834F)),
+      icon: Image.asset(
+        'lib/assets/images/Icons/Chat Agro.png',
+        height: 20,
+        width: 20,
+      ),
       label: Text(
         l10n.makeADeal,
         style: const TextStyle(
@@ -576,6 +691,8 @@ class ProductDetailScreen extends StatelessWidget {
                             snackPosition: SnackPosition.BOTTOM,
                             backgroundColor: Colors.redAccent,
                             colorText: Colors.white,
+                            margin: const EdgeInsets.all(16),
+                            borderRadius: 12,
                           );
                           return;
                         }
@@ -586,6 +703,8 @@ class ProductDetailScreen extends StatelessWidget {
                             snackPosition: SnackPosition.BOTTOM,
                             backgroundColor: Colors.redAccent,
                             colorText: Colors.white,
+                            margin: const EdgeInsets.all(16),
+                            borderRadius: 12,
                           );
                           return;
                         }
@@ -598,6 +717,8 @@ class ProductDetailScreen extends StatelessWidget {
                             snackPosition: SnackPosition.BOTTOM,
                             backgroundColor: Colors.redAccent,
                             colorText: Colors.white,
+                            margin: const EdgeInsets.all(16),
+                            borderRadius: 12,
                           );
                           return;
                         }
@@ -768,141 +889,8 @@ class ProductDetailScreen extends StatelessWidget {
           ),
         ),
         TextButton.icon(
-          onPressed: () {
-            final reasonController = TextEditingController();
-            showDialog(
-              context: context,
-              builder:
-                  (context) => Dialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    insetPadding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 24,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Text(
-                              l10n.reportAd,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            l10n.reportAdReason,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.black54,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: reasonController,
-                            decoration: InputDecoration(
-                              hintText: l10n.reason,
-                              border: const OutlineInputBorder(),
-                            ),
-                            maxLines: 3,
-                          ),
-                          const SizedBox(height: 24),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  style: OutlinedButton.styleFrom(
-                                    minimumSize: const Size.fromHeight(48),
-                                    side: const BorderSide(
-                                      color: Color(0xFF1B834F),
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    l10n.cancel,
-                                    style: const TextStyle(
-                                      color: Color(0xFF1B834F),
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    if (reasonController.text.trim().isEmpty) {
-                                      Get.snackbar(
-                                        l10n.required,
-                                        l10n.pleaseEnterReason,
-                                        snackPosition: SnackPosition.BOTTOM,
-                                        backgroundColor: Colors.redAccent,
-                                        colorText: Colors.white,
-                                      );
-                                      return;
-                                    }
-                                    Navigator.pop(context);
-                                    final success = await controller.reportAd(
-                                      product.id,
-                                      reasonController.text.trim(),
-                                    );
-                                    if (success) {
-                                      Get.snackbar(
-                                        l10n.success,
-                                        l10n.adReported,
-                                        snackPosition: SnackPosition.BOTTOM,
-                                        backgroundColor: const Color(
-                                          0xFF1B834F,
-                                        ),
-                                        colorText: Colors.white,
-                                      );
-                                    } else {
-                                      Get.snackbar(
-                                        l10n.error,
-                                        l10n.failedReport,
-                                        snackPosition: SnackPosition.BOTTOM,
-                                        backgroundColor: Colors.redAccent,
-                                        colorText: Colors.white,
-                                      );
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF1B834F),
-                                    minimumSize: const Size.fromHeight(48),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(15),
-                                    ),
-                                    elevation: 0,
-                                  ),
-                                  child: Text(
-                                    l10n.submit,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-            );
-          },
+          onPressed:
+              () => _showReportAdBottomSheet(context, controller, product),
           style: TextButton.styleFrom(
             padding: EdgeInsets.zero,
             minimumSize: Size.zero,
@@ -1065,4 +1053,225 @@ class ProductDetailScreen extends StatelessWidget {
       },
     );
   }
+}
+
+void _showReportAdBottomSheet(
+  BuildContext context,
+  ProductController controller,
+  Product product,
+) {
+  final reasons = [
+    'Offensive Content',
+    'Fraud',
+    'Duplicate Ad',
+    'Product Already Sold',
+    'Other',
+  ];
+  final selectedReason = "".obs;
+  final commentController = TextEditingController();
+
+  Get.bottomSheet(
+    SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => Get.back(),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.grey,
+              ),
+              child: const Icon(Icons.close, size: 24, color: Colors.black),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Report Ad',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...reasons.map(
+                  (reason) => Obx(
+                    () => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
+                        onTap: () => selectedReason.value = reason,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color:
+                                      selectedReason.value == reason
+                                          ? const Color(0xFF1B834F)
+                                          : Colors.grey.shade400,
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                                color:
+                                    selectedReason.value == reason
+                                        ? const Color(0xFF1B834F)
+                                        : Colors.transparent,
+                              ),
+                              child:
+                                  selectedReason.value == reason
+                                      ? const Icon(
+                                        Icons.check,
+                                        size: 16,
+                                        color: Colors.white,
+                                      )
+                                      : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              reason,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.black87,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: commentController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    hintText: 'Comment',
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade400,
+                      fontSize: 13,
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFFF9F9F9),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.all(12),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Get.back(),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          side: const BorderSide(color: Color(0xFF1B834F)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: Color(0xFF1B834F),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (selectedReason.value.isEmpty) {
+                            Get.snackbar(
+                              'Required',
+                              'Please select a reason',
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: Colors.redAccent,
+                              colorText: Colors.white,
+                              margin: const EdgeInsets.all(16),
+                              borderRadius: 12,
+                            );
+                            return;
+                          }
+
+                          final l10n = AppLocalizations.of(context)!;
+                          final success = await controller.reportAd(
+                            productId: product.id,
+                            reason: selectedReason.value,
+                            comment: commentController.text,
+                          );
+
+                          Get.back();
+
+                          if (success) {
+                            Get.snackbar(
+                              l10n.success,
+                              l10n.adReported,
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: const Color(0xFF1B834F),
+                              colorText: Colors.white,
+                              margin: const EdgeInsets.all(16),
+                              borderRadius: 12,
+                            );
+                          } else {
+                            Get.snackbar(
+                              l10n.error,
+                              l10n.failedReport,
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: Colors.redAccent,
+                              colorText: Colors.white,
+                              margin: const EdgeInsets.all(16),
+                              borderRadius: 12,
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1B834F),
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Send',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+  );
 }

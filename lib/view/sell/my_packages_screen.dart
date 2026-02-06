@@ -73,18 +73,23 @@ class MyPackagesScreen extends StatelessWidget {
                 children:
                     controller.myPackages.map((package) {
                       final l10n = AppLocalizations.of(context)!;
-                      final ads = package['ads']?.toString() ?? '0';
-                      final totalAds =
-                          package['package']?['total_ads']?.toString() ??
-                          package['total_ads']?.toString() ??
-                          '0';
+
+                      // Extract fields from API response
+                      // API returns: no_ads, duration, amount
+                      final totalAds = package['no_ads']?.toString() ?? '0';
                       final validity = l10n.validityLabel(
-                        (package['package']?['validity_days'] ??
-                                package['validity_days'] ??
-                                '0')
-                            .toString(),
+                        (package['duration'] ?? '0').toString(),
                       );
-                      final remaining = int.tryParse(ads) ?? 0;
+
+                      // For remaining ads, check if there's a separate 'ads' or 'remaining_ads' field
+                      // Otherwise use total ads as fallback
+                      final remaining =
+                          int.tryParse(
+                            package['remaining_ads']?.toString() ??
+                                package['ads']?.toString() ??
+                                totalAds,
+                          ) ??
+                          0;
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),

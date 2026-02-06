@@ -235,8 +235,10 @@ class _ChatScreenState extends State<ChatScreen> {
                           l10n.error,
                           l10n.couldNotDownloadInvoice,
                           snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: Colors.red,
+                          backgroundColor: Colors.redAccent,
                           colorText: Colors.white,
+                          margin: const EdgeInsets.all(16),
+                          borderRadius: 12,
                         );
                       }
                     }
@@ -1046,8 +1048,10 @@ class _ChatScreenState extends State<ChatScreen> {
                       l10n.error,
                       l10n.pleaseEnterReason,
                       snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: Colors.red,
+                      backgroundColor: Colors.redAccent,
                       colorText: Colors.white,
+                      margin: const EdgeInsets.all(16),
+                      borderRadius: 12,
                     );
                     return;
                   }
@@ -1078,10 +1082,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     if (mounted) {
                       Get.snackbar(
                         l10n.error,
-                        l10n.failedReport,
+                        l10n.pleaseEnterReason,
                         snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: Colors.red,
+                        backgroundColor: Colors.redAccent,
                         colorText: Colors.white,
+                        margin: const EdgeInsets.all(16),
+                        borderRadius: 12,
                       );
                     }
                   }
@@ -1226,8 +1232,10 @@ class _ChatScreenState extends State<ChatScreen> {
                                           l10n.error,
                                           l10n.failedToGenerateInvoice,
                                           snackPosition: SnackPosition.BOTTOM,
-                                          backgroundColor: Colors.red,
+                                          backgroundColor: Colors.redAccent,
                                           colorText: Colors.white,
+                                          margin: const EdgeInsets.all(16),
+                                          borderRadius: 12,
                                         );
                                       }
                                     },
@@ -1458,6 +1466,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                                   SnackPosition.BOTTOM,
                                               backgroundColor: Colors.redAccent,
                                               colorText: Colors.white,
+                                              margin: const EdgeInsets.all(16),
+                                              borderRadius: 12,
                                             );
                                             return;
                                           }
@@ -1472,6 +1482,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                                   SnackPosition.BOTTOM,
                                               backgroundColor: Colors.redAccent,
                                               colorText: Colors.white,
+                                              margin: const EdgeInsets.all(16),
+                                              borderRadius: 12,
                                             );
                                             return;
                                           }
@@ -1486,6 +1498,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                                   SnackPosition.BOTTOM,
                                               backgroundColor: Colors.redAccent,
                                               colorText: Colors.white,
+                                              margin: const EdgeInsets.all(16),
+                                              borderRadius: 12,
                                             );
                                             return;
                                           }
@@ -1500,6 +1514,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                                   SnackPosition.BOTTOM,
                                               backgroundColor: Colors.redAccent,
                                               colorText: Colors.white,
+                                              margin: const EdgeInsets.all(16),
+                                              borderRadius: 12,
                                             );
                                             return;
                                           }
@@ -1514,6 +1530,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                                   SnackPosition.BOTTOM,
                                               backgroundColor: Colors.redAccent,
                                               colorText: Colors.white,
+                                              margin: const EdgeInsets.all(16),
+                                              borderRadius: 12,
                                             );
                                             return;
                                           }
@@ -1528,6 +1546,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                                   SnackPosition.BOTTOM,
                                               backgroundColor: Colors.redAccent,
                                               colorText: Colors.white,
+                                              margin: const EdgeInsets.all(16),
+                                              borderRadius: 12,
                                             );
                                             return;
                                           }
@@ -1542,6 +1562,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                                   SnackPosition.BOTTOM,
                                               backgroundColor: Colors.redAccent,
                                               colorText: Colors.white,
+                                              margin: const EdgeInsets.all(16),
+                                              borderRadius: 12,
                                             );
                                             return;
                                           }
@@ -1556,6 +1578,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                                   SnackPosition.BOTTOM,
                                               backgroundColor: Colors.redAccent,
                                               colorText: Colors.white,
+                                              margin: const EdgeInsets.all(16),
+                                              borderRadius: 12,
                                             );
                                             return;
                                           }

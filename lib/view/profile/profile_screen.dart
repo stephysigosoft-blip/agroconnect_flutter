@@ -27,6 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _userPhone = '';
   String _userCountryCode = '';
   String _userImage = '';
+  bool _isGuest = false;
 
   @override
   void initState() {
@@ -51,6 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _userPhone = prefs.getString('user_phone') ?? '';
       _userCountryCode = prefs.getString('user_country_code') ?? '';
       _userImage = prefs.getString('user_image') ?? '';
+      _isGuest = prefs.getBool('is_guest') ?? false;
     });
 
     // Fetch from API to sync
@@ -112,24 +114,122 @@ class _ProfileScreenState extends State<ProfileScreen> {
         color: const Color(0xFF1B834F),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 12),
-              _buildUserInfo(),
-              const SizedBox(height: 24),
-              _buildSubscriptionCard(),
-              const SizedBox(height: 24),
-              _buildLanguageSelector(),
-              const SizedBox(height: 24),
-              _buildMenuList(),
-              const SizedBox(height: 24),
-              _buildSocialMediaIcons(),
-              const SizedBox(height: 40),
-            ],
+          child: GestureDetector(
+            onTap: _isGuest ? () => _showLoginRequiredDialog(context) : null,
+            behavior: HitTestBehavior.opaque,
+            child: IgnorePointer(
+              ignoring: _isGuest,
+              child: Column(
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 12),
+                  _buildUserInfo(),
+                  const SizedBox(height: 24),
+                  _buildSubscriptionCard(),
+                  const SizedBox(height: 24),
+                  _buildLanguageSelector(),
+                  const SizedBox(height: 24),
+                  _buildMenuList(),
+                  const SizedBox(height: 24),
+                  _buildSocialMediaIcons(),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  void _showLoginRequiredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.lock_outline,
+                    size: 40,
+                    color: Colors.orangeAccent,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Login Required',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'please login to access the application',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Get.back(); // Close dialog
+                      Get.offAllNamed('/languageSelection');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1B834F),
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Login',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Get.back(),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -594,13 +694,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             title: AppLocalizations.of(context)!.privacyPolicy,
             onTap: () => Get.toNamed('/privacyPolicy'),
           ),
-          _buildMenuItem(
-            icon: Icons.logout,
-            title: AppLocalizations.of(context)!.logout,
-            onTap: _showLogoutDialog,
-            isLogout: true,
-            showChevron: false,
-          ),
+          if (!_isGuest)
+            _buildMenuItem(
+              icon: Icons.logout,
+              title: AppLocalizations.of(context)!.logout,
+              onTap: _showLogoutDialog,
+              isLogout: true,
+              showChevron: false,
+            ),
         ],
       ),
     );

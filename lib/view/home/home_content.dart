@@ -14,7 +14,11 @@ class HomeContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final HomeController controller = Get.find<HomeController>();
     final ProductController productController = Get.find<ProductController>();
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
+
+    if (l10n == null) {
+      return const Scaffold(backgroundColor: Colors.white);
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -46,6 +50,10 @@ class HomeContent extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.search, color: Colors.black87, size: 28),
             onPressed: () {
+              productController.selectedCategoryId.value = '';
+              productController.currentCategoryName.value = '';
+              productController.setSearchQuery('');
+              productController.fetchAllProductsApi();
               Get.toNamed('/search');
             },
           ),
@@ -57,8 +65,6 @@ class HomeContent extends StatelessWidget {
             ),
             onPressed: () {
               Get.toNamed('/wishlist');
-              // Navigate to Wishlist tab (index 3)
-              // controller.jumpToTab(3);
             },
           ),
           const SizedBox(width: 8),
@@ -86,11 +92,8 @@ class HomeContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 12),
-                // Promotional Banner
                 _buildPromotionalBanner(l10n, controller),
                 const SizedBox(height: 24),
-
-                // Categories Section
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
@@ -103,9 +106,6 @@ class HomeContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 _buildCategoriesSection(l10n, productController),
-                // const SizedBox(height: 5),
-
-                // Recently Added Section
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -124,8 +124,6 @@ class HomeContent extends StatelessWidget {
                 const SizedBox(height: 10),
                 _buildRecentlyAddedSection(l10n),
                 const SizedBox(height: 16),
-
-                // Recommendations Section
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
@@ -139,11 +137,11 @@ class HomeContent extends StatelessWidget {
                 const SizedBox(height: 16),
                 _buildRecommendationsSection(l10n, productController),
                 const SizedBox(height: 24),
-
-                // All Products Section
                 Obx(() {
-                  if (controller.allProducts.isEmpty)
+                  if (controller.allProducts.isEmpty &&
+                      !controller.isFetchingHome.value) {
                     return const SizedBox.shrink();
+                  }
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -191,7 +189,6 @@ class HomeContent extends StatelessWidget {
       height: 180,
       child: Stack(
         children: [
-          // Carousel pages
           Obx(
             () => ClipRRect(
               borderRadius: BorderRadius.circular(16),
@@ -206,8 +203,6 @@ class HomeContent extends StatelessWidget {
                       ? Image.network(
                         imagePath,
                         fit: BoxFit.fill,
-                        filterQuality: FilterQuality.high,
-                        isAntiAlias: true,
                         width: double.infinity,
                         height: 180,
                         errorBuilder:
@@ -219,39 +214,17 @@ class HomeContent extends StatelessWidget {
                                 color: Colors.grey,
                               ),
                             ),
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return Center(
-                            child: CircularProgressIndicator(
-                              value:
-                                  progress.expectedTotalBytes != null
-                                      ? progress.cumulativeBytesLoaded /
-                                          progress.expectedTotalBytes!
-                                      : null,
-                              color: const Color(0xFF1B834F),
-                              strokeWidth: 2,
-                            ),
-                          );
-                        },
                       )
                       : Image.asset(
                         imagePath,
                         fit: BoxFit.fill,
-                        filterQuality: FilterQuality.high,
-                        isAntiAlias: true,
                         width: double.infinity,
                         height: 180,
-                        errorBuilder:
-                            (context, error, stackTrace) => Container(
-                              color: Colors.white,
-                              child: const Icon(Icons.landscape, size: 50),
-                            ),
                       );
                 },
               ),
             ),
           ),
-          // Carousel dots overlay
           Positioned(
             left: 0,
             right: 0,
@@ -295,10 +268,7 @@ class HomeContent extends StatelessWidget {
 
     return Obx(() {
       final categories = controller.categories;
-
-      if (categories.isEmpty) {
-        return const SizedBox.shrink();
-      }
+      if (categories.isEmpty) return const SizedBox.shrink();
 
       return SizedBox(
         height: 120,
@@ -307,37 +277,44 @@ class HomeContent extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: categories.length,
           itemBuilder: (context, index) {
-            final cat = categories[index];
+            final dynamic catRaw = categories[index];
+            if (catRaw == null || catRaw is! Map)
+              return const SizedBox.shrink();
+            final Map<String, dynamic> cat = Map<String, dynamic>.from(catRaw);
             final langCode = Get.locale?.languageCode ?? 'en';
             String label = '';
             if (langCode == 'ar') {
               label =
-                  cat['category_name_ar'] ??
-                  cat['name_ar'] ??
-                  cat['name'] ??
-                  cat['category_name'] ??
+                  cat['category_name_ar']?.toString() ??
+                  cat['name_ar']?.toString() ??
+                  cat['name']?.toString() ??
                   '';
             } else if (langCode == 'fr') {
               label =
-                  cat['category_name_fr'] ??
-                  cat['name_fr'] ??
-                  cat['name'] ??
-                  cat['category_name'] ??
+                  cat['category_name_fr']?.toString() ??
+                  cat['name_fr']?.toString() ??
+                  cat['name']?.toString() ??
                   '';
             } else {
               label =
-                  cat['category_name_en'] ??
-                  cat['name_en'] ??
-                  cat['name'] ??
-                  cat['category_name'] ??
+                  cat['category_name_en']?.toString() ??
+                  cat['name_en']?.toString() ??
+                  cat['name']?.toString() ??
                   '';
             }
-            final imageUrl = cat['category_image'] ?? cat['image'] ?? '';
+            final imageUrl =
+                (cat['category_image'] ?? cat['image'] ?? '').toString();
             final isNetwork = imageUrl.startsWith('http');
+            final catId = cat['id'];
 
             return GestureDetector(
               onTap: () {
-                productController.setSearchQuery(label);
+                if (catId != null) {
+                  productController.selectedCategoryId.value = catId.toString();
+                  productController.currentCategoryName.value = label;
+                  productController.setSearchQuery('');
+                  productController.fetchAllProductsApi();
+                }
                 Get.to(() => const SearchScreen());
               },
               child: Container(
@@ -354,13 +331,6 @@ class HomeContent extends StatelessWidget {
                           color: const Color(0xFF1B834F),
                           width: 1,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF1B834F).withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
                       child: ClipOval(
                         child:
@@ -373,15 +343,6 @@ class HomeContent extends StatelessWidget {
                                   errorBuilder:
                                       (context, error, stackTrace) =>
                                           _buildCategoryPlaceholder(label),
-                                  loadingBuilder: (context, child, progress) {
-                                    if (progress == null) return child;
-                                    return const Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Color(0xFF1B834F),
-                                      ),
-                                    );
-                                  },
                                 )
                                 : Image.asset(
                                   imageUrl,
@@ -418,11 +379,7 @@ class HomeContent extends StatelessWidget {
   Widget _buildCategoryPlaceholder(String label) {
     return Container(
       color: Colors.grey.shade100,
-      child: Icon(
-        _getCategoryIcon(label),
-        color: const Color(0xFF1B834F),
-        size: 32,
-      ),
+      child: Icon(Icons.category, color: const Color(0xFF1B834F), size: 32),
     );
   }
 
@@ -431,7 +388,6 @@ class HomeContent extends StatelessWidget {
 
     return Obx(() {
       final recent = controller.recentlyAddedProducts;
-
       if (recent.isEmpty) {
         return Center(
           child: Padding(
@@ -446,43 +402,16 @@ class HomeContent extends StatelessWidget {
 
       return SizedBox(
         height: 230,
-        child: NotificationListener<ScrollNotification>(
-          onNotification: (ScrollNotification scrollInfo) {
-            if (scrollInfo.metrics.pixels >=
-                scrollInfo.metrics.maxScrollExtent * 0.8) {
-              if (controller.hasMoreRecent.value &&
-                  !controller.isLoadingMoreRecent.value) {
-                controller.fetchRecent(loadMore: true);
-              }
-            }
-            return false;
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: recent.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: ProductCard(product: recent[index], isHorizontal: true),
+            );
           },
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: recent.length + (controller.hasMoreRecent.value ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index == recent.length) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFF1B834F),
-                      ),
-                    ),
-                  ),
-                );
-              }
-              return Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: ProductCard(product: recent[index], isHorizontal: true),
-              );
-            },
-          ),
         ),
       );
     });
@@ -496,7 +425,6 @@ class HomeContent extends StatelessWidget {
 
     return Obx(() {
       final products = controller.recommendedProducts;
-
       if (products.isEmpty) {
         return Center(
           child: Padding(
@@ -527,34 +455,6 @@ class HomeContent extends StatelessWidget {
                 return ProductCard(product: products[index]);
               },
             ),
-            if (controller.hasMoreRecommended.value)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20.0),
-                child: Center(
-                  child:
-                      controller.isLoadingMoreRecommended.value
-                          ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color(0xFF1B834F),
-                            ),
-                          )
-                          : TextButton(
-                            onPressed:
-                                () =>
-                                    controller.fetchRecommended(loadMore: true),
-                            child: Text(
-                              l10n.loadMore,
-                              style: const TextStyle(
-                                color: Color(0xFF1B834F),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                ),
-              ),
           ],
         ),
       );
@@ -566,7 +466,6 @@ class HomeContent extends StatelessWidget {
 
     return Obx(() {
       final products = controller.allProducts;
-
       if (products.isEmpty) {
         return Center(
           child: Padding(
@@ -597,24 +496,5 @@ class HomeContent extends StatelessWidget {
         ),
       );
     });
-  }
-
-  // _buildProductCard method removed as it's replaced by ProductCard widget
-
-  // _getProductIcon method removed as it's no longer needed
-
-  IconData _getCategoryIcon(String categoryLabel) {
-    if (categoryLabel.contains('Grains') || categoryLabel.contains('Cereals')) {
-      return Icons.grass;
-    } else if (categoryLabel.contains('Vegetables')) {
-      return Icons.eco;
-    } else if (categoryLabel.contains('Livestock') ||
-        categoryLabel.contains('Meat')) {
-      return Icons.set_meal;
-    } else if (categoryLabel.contains('Poultry') ||
-        categoryLabel.contains('Eggs')) {
-      return Icons.egg;
-    }
-    return Icons.category;
   }
 }

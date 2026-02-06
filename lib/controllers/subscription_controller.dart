@@ -20,6 +20,7 @@ class SubscriptionController extends GetxController {
   Future<void> fetchMyPackages() async {
     try {
       isLoading.value = true;
+      myPackages.clear(); // Ensure list is cleared before fetching
       final apiService = Get.find<ApiService>();
       print('🔄 Fetching MY packages (bought) from API (fetch-packages)...');
       final response =
@@ -38,6 +39,14 @@ class SubscriptionController extends GetxController {
       print('❌ Error fetching MY packages: $e');
     } finally {
       isLoading.value = false;
+      print(
+        '🏁 fetchMyPackages finished. Loading: ${isLoading.value}, Packages Count: ${myPackages.length}',
+      );
+      if (myPackages.isEmpty) {
+        print('⚠️ No packages found. Banner SHOULD be visible now.');
+      } else {
+        print('✅ Packages found. Banner SHOULD be hidden.');
+      }
     }
   }
 
@@ -108,8 +117,10 @@ class SubscriptionController extends GetxController {
         'Error',
         errorMsg,
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFFD32F2F),
+        backgroundColor: Colors.redAccent,
         colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
     } finally {
       isLoading.value = false;
@@ -214,7 +225,8 @@ class SubscriptionController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: status ? const Color(0xFF1B834F) : Colors.redAccent,
           colorText: Colors.white,
-          margin: const EdgeInsets.all(15),
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
           duration: const Duration(seconds: 4),
         );
 

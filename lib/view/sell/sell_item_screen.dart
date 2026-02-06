@@ -10,6 +10,7 @@ import '../../models/product.dart';
 import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 import 'package:geolocator/geolocator.dart';
 import 'location_selection_screen.dart';
+import '../../services/api_service.dart';
 
 class SellItemScreen extends StatefulWidget {
   const SellItemScreen({super.key});
@@ -24,6 +25,47 @@ class _SellItemScreenState extends State<SellItemScreen> {
   final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final SellController _sellController = Get.put(SellController());
+  late SubscriptionController _subscriptionController;
+  bool _isGuest = false;
+  final ApiService _apiService = Get.find<ApiService>();
+
+  @override
+  void initState() {
+    super.initState();
+    _subscriptionController = Get.put(SubscriptionController());
+    _checkGuestStatus();
+    // Immediate check
+    if (_subscriptionController.myPackages.isEmpty) {
+      _subscriptionController.fetchMyPackages();
+    }
+
+    // Trigger pop-up check when entering this screen as well
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_subscriptionController.myPackages.isEmpty &&
+          !_subscriptionController.isLoading.value) {
+        _checkAndShowPopup();
+      }
+    });
+  }
+
+  Future<void> _checkGuestStatus() async {
+    final isGuest = await _apiService.isGuest();
+    if (mounted) {
+      setState(() {
+        _isGuest = isGuest;
+      });
+    }
+  }
+
+  void _checkAndShowPopup() async {
+    // Re-fetch to be sure, unless already loaded
+    if (_subscriptionController.myPackages.isEmpty) {
+      await _subscriptionController.fetchMyPackages();
+    }
+    if (mounted && _subscriptionController.myPackages.isEmpty) {
+      _showPackageErrorPopup(context);
+    }
+  }
 
   final ImagePicker _picker = ImagePicker();
   List<XFile> _selectedImages = [];
@@ -32,6 +74,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
   String? _selectedLocation;
   String? _latitude;
   String? _longitude;
+  int? _selectedCategoryId;
 
   @override
   void dispose() {
@@ -187,7 +230,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ListTile(
-                  leading: const Icon(Icons.my_location, color: Colors.blue),
+                  leading: const Icon(Icons.location_on, color: Colors.red),
                   title: const Text('Use Current Location'),
                   onTap: () async {
                     Get.back();
@@ -233,10 +276,70 @@ class _SellItemScreenState extends State<SellItemScreen> {
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      Get.snackbar(
-        'Location Services Disabled',
-        'Please enable location services.',
+      // Show dialog with option to enable location
+      final shouldOpenSettings = await showDialog<bool>(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text('Location Services Disabled'),
+              content: const Text(
+                'Location services are currently disabled. Would you like to enable them in settings?',
+              ),
+              actions: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(40),
+                          side: const BorderSide(color: Color(0xFF1B834F)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: Color(0xFF1B834F),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1B834F),
+                          minimumSize: const Size.fromHeight(40),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Open Settings',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
       );
+
+      if (shouldOpenSettings == true) {
+        await Geolocator.openLocationSettings();
+      }
       return;
     }
 
@@ -244,7 +347,15 @@ class _SellItemScreenState extends State<SellItemScreen> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        Get.snackbar('Permission Denied', 'Location permissions are denied.');
+        Get.snackbar(
+          'Permission Denied',
+          'Location permissions are denied.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+        );
         return;
       }
     }
@@ -253,6 +364,11 @@ class _SellItemScreenState extends State<SellItemScreen> {
       Get.snackbar(
         'Permission Denied',
         'Location permissions are permanently denied.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       return;
     }
@@ -266,12 +382,27 @@ class _SellItemScreenState extends State<SellItemScreen> {
       });
     } catch (e) {
       debugPrint('Error getting location: $e');
-      Get.snackbar('Error', 'Failed to get location');
+      Get.snackbar(
+        'Error',
+        'Failed to get location',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+      );
     }
   }
 
   void _handlePost() {
     final l10n = AppLocalizations.of(context)!;
+    if (_selectedCategoryId == null) {
+      SnackBarHelper.showError(
+        l10n.required,
+        '${l10n.categories} ${l10n.required}',
+      );
+      return;
+    }
     if (_productNameController.text.trim().isEmpty) {
       SnackBarHelper.showError(l10n.required, l10n.pleaseEnterProductName);
       return;
@@ -321,6 +452,7 @@ class _SellItemScreenState extends State<SellItemScreen> {
       images: _selectedImages.map((e) => e.path).toList(),
       latitude: _latitude ?? '20.5184328',
       longitude: _longitude ?? '-13.1491552',
+      categoryId: _selectedCategoryId!,
     );
 
     if (response != null && response['status'] == true) {
@@ -528,27 +660,100 @@ class _SellItemScreenState extends State<SellItemScreen> {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildImageUploadSection(),
-            const SizedBox(height: 24),
-            _buildFormFields(l10n),
-            const SizedBox(height: 24),
-            _buildLocationSection(),
-            const SizedBox(height: 24),
-            _buildTextField(
-              label: l10n.description,
-              controller: _descriptionController,
-              hintText: '',
-              maxLines: 4,
+      body: GestureDetector(
+        onTap: _isGuest ? () => _showLoginRequiredDialog(context) : null,
+        behavior: HitTestBehavior.opaque,
+        child: IgnorePointer(
+          ignoring: _isGuest,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: 32,
             ),
-            const SizedBox(height: 32),
-            _buildPostButton(),
-            const SizedBox(height: 16),
-          ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // IMPORTANT MESSAGE - NO ACTIVE PLAN
+                Obx(() {
+                  final subController = Get.find<SubscriptionController>();
+                  // Only show if user has NO packages
+                  if (subController.myPackages.isEmpty) {
+                    return Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 24),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'No Active Plan. Please purchase a package.',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Get.toNamed('/buyPackages'),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                'Buy Now',
+                                style: TextStyle(
+                                  color: Colors.redAccent,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                }),
+                _buildImageUploadSection(),
+                const SizedBox(height: 24),
+                _buildFormFields(l10n),
+                const SizedBox(height: 24),
+                _buildLocationSection(),
+                const SizedBox(height: 24),
+                _buildTextField(
+                  label: l10n.description,
+                  controller: _descriptionController,
+                  hintText: '',
+                  maxLines: 4,
+                ),
+                const SizedBox(height: 32),
+                _buildPostButton(),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -940,6 +1145,108 @@ class _SellItemScreenState extends State<SellItemScreen> {
     );
   }
 
+  Widget _buildCategoryDropdown(AppLocalizations l10n) {
+    final HomeController homeController = Get.find<HomeController>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.categories,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Obx(() {
+            final cats = homeController.categories;
+            return DropdownButtonFormField<int>(
+              value: _selectedCategoryId,
+              isExpanded: true,
+              dropdownColor: Colors.white,
+              icon: const Icon(
+                Icons.keyboard_arrow_down,
+                color: Color(0xFF1B834F),
+              ),
+              style: const TextStyle(color: Colors.black, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: l10n.categories,
+                hintStyle: TextStyle(color: Colors.black.withOpacity(0.35)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF1B834F),
+                    width: 1.5,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              items:
+                  cats.map((cat) {
+                    final Map<String, dynamic> c = Map<String, dynamic>.from(
+                      cat,
+                    );
+                    final id = int.tryParse(c['id'].toString()) ?? 0;
+                    final langCode = Get.locale?.languageCode ?? 'en';
+                    String label = '';
+                    if (langCode == 'ar') {
+                      label =
+                          c['category_name_ar']?.toString() ??
+                          c['name_ar']?.toString() ??
+                          c['name']?.toString() ??
+                          '';
+                    } else if (langCode == 'fr') {
+                      label =
+                          c['category_name_fr']?.toString() ??
+                          c['name_fr']?.toString() ??
+                          c['name']?.toString() ??
+                          '';
+                    } else {
+                      label =
+                          c['category_name_en']?.toString() ??
+                          c['name_en']?.toString() ??
+                          c['name']?.toString() ??
+                          '';
+                    }
+                    return DropdownMenuItem<int>(value: id, child: Text(label));
+                  }).toList(),
+              onChanged: (val) {
+                setState(() {
+                  _selectedCategoryId = val;
+                });
+              },
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
   Widget _buildFormFields(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -949,6 +1256,8 @@ class _SellItemScreenState extends State<SellItemScreen> {
           controller: _productNameController,
           hintText: '',
         ),
+        const SizedBox(height: 16),
+        _buildCategoryDropdown(l10n),
         const SizedBox(height: 16),
         _buildTextField(
           label: l10n.price,
@@ -1049,26 +1358,17 @@ class _SellItemScreenState extends State<SellItemScreen> {
         GestureDetector(
           onTap: _selectLocation,
           child: Container(
-            height: 120,
-            width: double.infinity,
+            height: 71,
+            width: 146,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              image:
-                  (_latitude != null && _longitude != null)
-                      ? DecorationImage(
-                        image: NetworkImage(
-                          "https://static-maps.yandex.ru/1.x/?ll=$_longitude,$_latitude&z=13&l=map&size=400,200&pt=$_longitude,$_latitude,pm2rdl",
-                        ),
-                        fit: BoxFit.cover,
-                      )
-                      : const DecorationImage(
-                        image: AssetImage(
-                          'lib/assets/images/about farmer iamge.png',
-                        ),
-                        fit: BoxFit.cover,
-                        opacity: 0.3,
-                      ),
+              borderRadius: BorderRadius.circular(10),
+              image: DecorationImage(
+                image: NetworkImage(
+                  "https://static-maps.yandex.ru/1.x/?ll=${_longitude ?? '-15.9582'},${_latitude ?? '18.0735'}&z=13&l=map&size=600,350",
+                ),
+                fit: BoxFit.cover,
+              ),
               border: Border.all(color: Colors.grey.shade200),
               boxShadow: [
                 BoxShadow(
@@ -1078,32 +1378,8 @@ class _SellItemScreenState extends State<SellItemScreen> {
                 ),
               ],
             ),
-            child: Center(
-              child:
-                  (_latitude != null && _longitude != null)
-                      ? Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _selectedLocation ??
-                              AppLocalizations.of(context)!.selectRegion,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      )
-                      : const Icon(
-                        Icons.location_on,
-                        color: Colors.red,
-                        size: 30,
-                      ),
+            child: const Center(
+              child: Icon(Icons.location_on, color: Colors.red, size: 24),
             ),
           ),
         ),
@@ -1144,6 +1420,97 @@ class _SellItemScreenState extends State<SellItemScreen> {
                   ),
         ),
       ),
+    );
+  }
+
+  void _showLoginRequiredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.lock_outline,
+                    size: 40,
+                    color: Colors.orangeAccent,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Login Required',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'please login to access the application',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Get.back(); // Close dialog
+                      Get.offAllNamed('/languageSelection');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1B834F),
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Login',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Get.back(),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

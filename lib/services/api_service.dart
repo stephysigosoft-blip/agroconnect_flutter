@@ -17,6 +17,9 @@ class ApiService extends get_pkg.GetxService {
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
         headers: {'Accept': 'application/json'},
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+        sendTimeout: const Duration(seconds: 15),
       ),
     );
     super.onInit();
@@ -874,6 +877,7 @@ class ApiService extends get_pkg.GetxService {
         options: options,
       );
       _logSuccess('fetchPackages', response.statusCode, response.data);
+      print('📦 fetchPackages Response: ${response.data}');
       return response.data;
     } catch (e) {
       _logError('fetchPackages', e);
@@ -1066,10 +1070,16 @@ class ApiService extends get_pkg.GetxService {
     }
   }
 
+  Future<bool> isGuest() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('is_guest') ?? false;
+  }
+
   Future<Options> _getAuthOptions() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-    print('🔑 [API] Auth Token: Bearer $token');
+    final isGuestMode = prefs.getBool('is_guest') ?? false;
+    final token = isGuestMode ? null : prefs.getString('auth_token');
+    print('🔑 [API] Auth Token: Bearer $token (Guest: $isGuestMode)');
     return Options(
       headers: {'Authorization': 'Bearer $token', 'Accept': 'application/json'},
     );

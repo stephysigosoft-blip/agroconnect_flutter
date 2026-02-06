@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../models/product.dart';
 import '../../controllers/my_ads_controller.dart';
+import '../../controllers/home_controller.dart';
 import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 
 class EditItemScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
   late final TextEditingController _quantityController;
   late final TextEditingController _descriptionController;
   final MyAdsController _myAdsController = Get.find<MyAdsController>();
+  int? _selectedCategoryId;
 
   @override
   void initState() {
@@ -32,6 +34,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
     _descriptionController = TextEditingController(
       text: widget.product.description,
     );
+    _selectedCategoryId = widget.product.categoryId;
   }
 
   @override
@@ -52,6 +55,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       return;
     }
@@ -62,6 +67,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       return;
     }
@@ -73,6 +80,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       return;
     }
@@ -83,6 +92,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       return;
     }
@@ -94,6 +105,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       return;
     }
@@ -104,6 +117,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       return;
     }
@@ -114,6 +129,7 @@ class _EditItemScreenState extends State<EditItemScreen> {
       description: _descriptionController.text,
       pricePerKg: _priceController.text,
       quantity: _quantityController.text,
+      categoryId: _selectedCategoryId,
     );
 
     if (success) {
@@ -189,6 +205,8 @@ class _EditItemScreenState extends State<EditItemScreen> {
                     AppLocalizations.of(context)!.priceHint,
                   ),
                   const SizedBox(height: 20),
+                  _buildCategoryDropdown(AppLocalizations.of(context)!),
+                  const SizedBox(height: 20),
                   _buildLabel(AppLocalizations.of(context)!.quantity),
                   const SizedBox(height: 8),
                   _buildTextField(
@@ -244,6 +262,97 @@ class _EditItemScreenState extends State<EditItemScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCategoryDropdown(AppLocalizations l10n) {
+    // We use HomeController as it already has the categories list
+    final homeController = Get.find<HomeController>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel(l10n.categories),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Obx(() {
+            final cats = homeController.categories;
+            return DropdownButtonFormField<int>(
+              value: _selectedCategoryId,
+              isExpanded: true,
+              dropdownColor: Colors.white,
+              icon: const Icon(
+                Icons.keyboard_arrow_down,
+                color: Color(0xFF1B834F),
+              ),
+              style: const TextStyle(color: Colors.black, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: l10n.categories,
+                hintStyle: TextStyle(color: Colors.grey.shade400),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFF1B834F)),
+                ),
+              ),
+              items:
+                  cats.map((cat) {
+                    final Map<String, dynamic> c = Map<String, dynamic>.from(
+                      cat,
+                    );
+                    final id = int.tryParse(c['id'].toString()) ?? 0;
+                    final langCode = Get.locale?.languageCode ?? 'en';
+                    String label = '';
+                    if (langCode == 'ar') {
+                      label =
+                          c['category_name_ar']?.toString() ??
+                          c['name_ar']?.toString() ??
+                          c['name']?.toString() ??
+                          '';
+                    } else if (langCode == 'fr') {
+                      label =
+                          c['category_name_fr']?.toString() ??
+                          c['name_fr']?.toString() ??
+                          c['name']?.toString() ??
+                          '';
+                    } else {
+                      label =
+                          c['category_name_en']?.toString() ??
+                          c['name_en']?.toString() ??
+                          c['name']?.toString() ??
+                          '';
+                    }
+                    return DropdownMenuItem<int>(value: id, child: Text(label));
+                  }).toList(),
+              onChanged: (val) {
+                setState(() {
+                  _selectedCategoryId = val;
+                });
+              },
+            );
+          }),
+        ),
+      ],
     );
   }
 

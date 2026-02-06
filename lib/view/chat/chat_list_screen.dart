@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../controllers/chat_controller.dart';
 import '../../controllers/home_controller.dart';
 import 'chat_screen.dart';
+import '../../services/api_service.dart';
 
 class ChatListScreen extends StatelessWidget {
   const ChatListScreen({super.key});
@@ -12,119 +13,232 @@ class ChatListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ChatController controller = Get.put(ChatController());
-    final l10n = AppLocalizations.of(context)!;
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return const Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        leading: Center(
-          child: GestureDetector(
-            onTap: () {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              } else {
-                // If it's the root tab, jump to Home tab (index 0)
-                try {
-                  final homeController = Get.find<HomeController>();
-                  homeController.jumpToTab(0);
-                } catch (e) {
-                  // Fallback to standard back if controller not found
-                  Get.back();
-                }
-              }
-            },
-            child: Container(
-              width: 35,
-              height: 35,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1B834F), // Green filled
-                borderRadius: BorderRadius.circular(12),
-              ),
-              alignment: Alignment.center,
-              child: const Icon(
-                Icons.chevron_left,
-                color: Colors.white,
-                size: 28,
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF1B834F)),
+        ),
+      );
+    }
+
+    return FutureBuilder<bool>(
+      future: Get.find<ApiService>().isGuest(),
+      builder: (context, snapshot) {
+        final isGuest = snapshot.data ?? false;
+
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            leading: Center(
+              child: GestureDetector(
+                onTap: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    // If it's the root tab, jump to Home tab (index 0)
+                    try {
+                      final homeController = Get.find<HomeController>();
+                      homeController.jumpToTab(0);
+                    } catch (e) {
+                      // Fallback to standard back if controller not found
+                      Get.back();
+                    }
+                  }
+                },
+                child: Container(
+                  width: 35,
+                  height: 35,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1B834F), // Green filled
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.chevron_left,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        title: Text(
-          l10n.chat,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: Colors.grey, width: 1),
-                borderRadius: BorderRadius.circular(20),
+            title: Text(
+              l10n.chat,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
               ),
-              child: Row(
-                children: const [
-                  SizedBox(width: 12),
-                  Icon(Icons.search, color: Colors.grey, size: 18),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search',
-                        border: InputBorder.none,
-                        isDense: true,
+            ),
+            centerTitle: true,
+          ),
+          body: GestureDetector(
+            onTap: isGuest ? () => _showLoginRequiredDialog(context) : null,
+            behavior: HitTestBehavior.opaque,
+            child: IgnorePointer(
+              ignoring: isGuest,
+              child: Column(
+                children: [
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.grey, width: 1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: const [
+                          SizedBox(width: 12),
+                          Icon(Icons.search, color: Colors.grey, size: 18),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              decoration: InputDecoration(
+                                hintText: 'Search',
+                                border: InputBorder.none,
+                                isDense: true,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: Obx(() {
+                      if (controller.isFetchingThreads.value &&
+                          controller.threads.isEmpty) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (controller.threads.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'No chats yet',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        );
+                      }
+                      return RefreshIndicator(
+                        onRefresh: () async {
+                          await controller.fetchThreads();
+                        },
+                        color: const Color(0xFF1B834F),
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: controller.threads.length,
+                          itemBuilder: (context, index) {
+                            final thread = controller.threads[index];
+                            return _ChatListItem(thread: thread);
+                          },
+                        ),
+                      );
+                    }),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Obx(() {
-              if (controller.isFetchingThreads.value &&
-                  controller.threads.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
-              }
+        );
+      },
+    );
+  }
 
-              if (controller.threads.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'No chats yet',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                );
-              }
-              return RefreshIndicator(
-                onRefresh: () async {
-                  await controller.fetchThreads();
-                },
-                color: const Color(0xFF1B834F),
-                child: ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: controller.threads.length,
-                  itemBuilder: (context, index) {
-                    final thread = controller.threads[index];
-                    return _ChatListItem(thread: thread);
-                  },
-                ),
-              );
-            }),
+  void _showLoginRequiredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
-        ],
-      ),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.lock_outline,
+                    size: 40,
+                    color: Colors.orangeAccent,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Login Required',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'please login to access the application',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.black54),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Get.back(); // Close dialog
+                      Get.offAllNamed('/languageSelection');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1B834F),
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Login',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Get.back(),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -393,8 +507,10 @@ class _ChatListItem extends StatelessWidget {
                       l10n.error,
                       l10n.pleaseEnterReason,
                       snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: Colors.red,
+                      backgroundColor: Colors.redAccent,
                       colorText: Colors.white,
+                      margin: const EdgeInsets.all(16),
+                      borderRadius: 12,
                     );
                     return;
                   }
@@ -412,14 +528,18 @@ class _ChatListItem extends StatelessWidget {
                       snackPosition: SnackPosition.BOTTOM,
                       backgroundColor: const Color(0xFF1B834F),
                       colorText: Colors.white,
+                      margin: const EdgeInsets.all(16),
+                      borderRadius: 12,
                     );
                   } else {
                     Get.snackbar(
                       l10n.error,
                       l10n.failedReport,
                       snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: Colors.red,
+                      backgroundColor: Colors.redAccent,
                       colorText: Colors.white,
+                      margin: const EdgeInsets.all(16),
+                      borderRadius: 12,
                     );
                   }
                 },

@@ -139,7 +139,7 @@ abstract class AppLocalizations {
   /// Placeholder for phone number input
   ///
   /// In en, this message translates to:
-  /// **'Enter your whatsapp number'**
+  /// **'Enter your WhatsApp number'**
   String get enterWhatsappNumber;
 
   /// OTP verification screen title
@@ -415,7 +415,7 @@ abstract class AppLocalizations {
   /// No description provided for @yourOfferPrice.
   ///
   /// In en, this message translates to:
-  /// **'Your Offer Price (MRU)'**
+  /// **'Your Offer Price (MRU/Kg)'**
   String get yourOfferPrice;
 
   /// No description provided for @success.
@@ -1633,7 +1633,7 @@ abstract class AppLocalizations {
   /// No description provided for @anyQuantity.
   ///
   /// In en, this message translates to:
-  /// **'Any quantity'**
+  /// **'Any Quantity'**
   String get anyQuantity;
 
   /// No description provided for @priceRangeLabel.
@@ -1663,7 +1663,7 @@ abstract class AppLocalizations {
   /// No description provided for @recentlyPosted.
   ///
   /// In en, this message translates to:
-  /// **'Recently posted'**
+  /// **'Recently Posted'**
   String get recentlyPosted;
 
   /// No description provided for @newestFirst.

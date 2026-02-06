@@ -21,7 +21,12 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     _productController = Get.put(ProductController());
-    _searchController.text = _productController.searchQuery.value;
+    if (_productController.currentCategoryName.value.isNotEmpty &&
+        _productController.searchQuery.value.isEmpty) {
+      _searchController.text = _productController.currentCategoryName.value;
+    } else {
+      _searchController.text = _productController.searchQuery.value;
+    }
   }
 
   @override
@@ -451,7 +456,14 @@ class _SearchScreenState extends State<SearchScreen> {
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Obx(() {
-          if (_productController.searchQuery.value.isEmpty) {
+          if (_productController.isFetchingAll.value &&
+              _productController.allProducts.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF1B834F)),
+            );
+          }
+          if (_productController.searchQuery.value.isEmpty &&
+              _productController.selectedCategoryId.value.isEmpty) {
             return const SizedBox.shrink();
           }
 

@@ -88,6 +88,8 @@ class IdentityVerificationScreen extends StatelessWidget {
                             snackPosition: SnackPosition.BOTTOM,
                             backgroundColor: Colors.redAccent,
                             colorText: Colors.white,
+                            margin: const EdgeInsets.all(16),
+                            borderRadius: 12,
                           );
                           return;
                         }
@@ -100,6 +102,8 @@ class IdentityVerificationScreen extends StatelessWidget {
                             snackPosition: SnackPosition.BOTTOM,
                             backgroundColor: Colors.redAccent,
                             colorText: Colors.white,
+                            margin: const EdgeInsets.all(16),
+                            borderRadius: 12,
                           );
                           return;
                         }
@@ -114,8 +118,10 @@ class IdentityVerificationScreen extends StatelessWidget {
                               context,
                             )!.failedToUploadDocuments,
                             snackPosition: SnackPosition.BOTTOM,
-                            backgroundColor: Colors.red,
+                            backgroundColor: Colors.redAccent,
                             colorText: Colors.white,
+                            margin: const EdgeInsets.all(16),
+                            borderRadius: 12,
                           );
                         }
                       }

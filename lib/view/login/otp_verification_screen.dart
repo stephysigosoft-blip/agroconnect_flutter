@@ -1,6 +1,7 @@
 import 'package:agroconnect_flutter/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 
 class LoginOtpVerificationScreen extends StatefulWidget {
   final String phoneNumber;
@@ -55,11 +56,14 @@ class _LoginOtpVerificationScreenState
   void _onContinue() {
     final otp = _otpControllers.map((e) => e.text).join();
     if (otp.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.pleaseEnterCompleteOtp),
-          backgroundColor: Colors.redAccent,
-        ),
+      Get.snackbar(
+        AppLocalizations.of(context)!.error,
+        AppLocalizations.of(context)!.pleaseEnterCompleteOtp,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       return;
     }
@@ -67,11 +71,14 @@ class _LoginOtpVerificationScreenState
       final l10n = AppLocalizations.of(context)!;
       // Complete login - Navigate to home/dashboard
       // TODO: Replace with actual home screen
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.loginSuccessful),
-          backgroundColor: const Color(0xFF1B834F),
-        ),
+      Get.snackbar(
+        l10n.success,
+        l10n.loginSuccessful,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF1B834F),
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       // Navigator.pushAndRemoveUntil(
       //   context,

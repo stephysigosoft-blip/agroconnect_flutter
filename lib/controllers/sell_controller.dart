@@ -16,7 +16,7 @@ class SellController extends GetxController {
     required List<String> images,
     required String latitude,
     required String longitude,
-    int categoryId = 1, // Default to 1 if not provided
+    required int categoryId,
   }) async {
     try {
       isPosting.value = true;

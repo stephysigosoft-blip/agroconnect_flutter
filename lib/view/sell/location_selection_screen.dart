@@ -116,7 +116,15 @@ class _LocationSelectionScreenState extends State<LocationSelectionScreen> {
                   });
                   _mapController.move(newCenter, 15);
                 } catch (e) {
-                  Get.snackbar('Error', 'Could not get current location');
+                  Get.snackbar(
+                    'Error',
+                    'Could not get current location',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.redAccent,
+                    colorText: Colors.white,
+                    margin: const EdgeInsets.all(16),
+                    borderRadius: 12,
+                  );
                 }
               },
             ),

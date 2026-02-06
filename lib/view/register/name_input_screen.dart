@@ -38,6 +38,8 @@ class _RegisterNameInputScreenState extends State<RegisterNameInputScreen> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.redAccent,
         colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       return;
     }
@@ -70,11 +72,14 @@ class _RegisterNameInputScreenState extends State<RegisterNameInputScreen> {
 
           if (!mounted) return;
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.registrationSuccessful(name)),
-              backgroundColor: const Color(0xFF1B834F),
-            ),
+          Get.snackbar(
+            l10n.success,
+            l10n.registrationSuccessful(name),
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: const Color(0xFF1B834F),
+            colorText: Colors.white,
+            margin: const EdgeInsets.all(16),
+            borderRadius: 12,
           );
           Get.offAllNamed('/home');
         } else {
@@ -86,6 +91,8 @@ class _RegisterNameInputScreenState extends State<RegisterNameInputScreen> {
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.redAccent,
             colorText: Colors.white,
+            margin: const EdgeInsets.all(16),
+            borderRadius: 12,
           );
         }
       } catch (e) {
@@ -97,6 +104,8 @@ class _RegisterNameInputScreenState extends State<RegisterNameInputScreen> {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.redAccent,
           colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       }
     }

@@ -33,6 +33,9 @@ class ProductController extends GetxController {
     fetchAllProductsApi();
   }
 
+  final RxString selectedCategoryId = ''.obs;
+  final RxString currentCategoryName = ''.obs;
+
   Future<void> fetchAllProductsApi({bool loadMore = false}) async {
     try {
       if (loadMore) {
@@ -43,9 +46,37 @@ class ProductController extends GetxController {
         currentPage.value = 1;
         hasMore.value = true;
       }
-
       final apiService = Get.find<ApiService>();
-      final response = await apiService.getAllProducts(page: currentPage.value);
+      final Map<String, dynamic> params = {
+        'page': currentPage.value,
+        'limit': selectedCategoryId.value.isNotEmpty ? 100 : 20,
+      };
+
+      if (selectedCategoryId.value.isNotEmpty) {
+        params['category_id'] = selectedCategoryId.value;
+        params['categories_id'] = selectedCategoryId.value;
+        params['cat_id'] = selectedCategoryId.value;
+        params['category'] = selectedCategoryId.value;
+      }
+
+      var response = await apiService.getAllProducts(queryParameters: params);
+
+      // If category-specific fetch returns nothing, try fetching global list as a fallback
+      if (!loadMore &&
+          selectedCategoryId.value.isNotEmpty &&
+          (response == null ||
+              response['status'] == false ||
+              _extractDataList(response['data']).isEmpty)) {
+        print(
+          '⚠️ [ProductController] Category-specific fetch empty, trying global list fallback...',
+        );
+        params.remove('category_id');
+        params.remove('categories_id');
+        params.remove('cat_id');
+        params.remove('category');
+        params['limit'] = 100; // Large batch for local filtering
+        response = await apiService.getAllProducts(queryParameters: params);
+      }
 
       if (response != null && response['status'] == true) {
         final List data = _extractDataList(response['data']);
@@ -199,7 +230,7 @@ class ProductController extends GetxController {
 
   /// Search & filters state
   final RxString searchQuery = ''.obs;
-  final Rx<RangeValues> priceRange = const RangeValues(50, 500).obs;
+  final Rx<RangeValues> priceRange = const RangeValues(0, 1000000).obs;
   final RxInt selectedQuantityIndex = 0.obs;
   final RxInt selectedSortIndex = 0.obs;
 
@@ -219,10 +250,36 @@ class ProductController extends GetxController {
 
     List<Product> products =
         allProducts.where((p) {
+          String pCategory = p.category;
+          final int? catId = p.categoryId;
+          if (catId != null) {
+            // Simple mapping based on known IDs if the server doesn't provide names
+            final int idInt = catId;
+            if (pCategory == 'Category' ||
+                pCategory == 'General' ||
+                pCategory == 'Unknown') {
+              pCategory = 'Category $idInt';
+            }
+          }
+
+          final matchesCategory =
+              selectedCategoryId.value.isEmpty ||
+              p.categoryId.toString() == selectedCategoryId.value ||
+              (currentCategoryName.value.isNotEmpty &&
+                  (pCategory.toLowerCase().contains(
+                        currentCategoryName.value.toLowerCase(),
+                      ) ||
+                      currentCategoryName.value.toLowerCase().contains(
+                        pCategory.toLowerCase(),
+                      ) ||
+                      p.name.toLowerCase().contains(
+                        currentCategoryName.value.toLowerCase(),
+                      )));
+
           final matchesQuery =
               query.isEmpty ||
               p.name.toLowerCase().contains(query) ||
-              p.category.toLowerCase().contains(query) ||
+              pCategory.toLowerCase().contains(query) ||
               p.location.toLowerCase().contains(query);
 
           final matchesPrice =
@@ -232,7 +289,10 @@ class ProductController extends GetxController {
               p.availableQuantityKg >= quantityRange.start &&
               p.availableQuantityKg <= quantityRange.end;
 
-          return matchesQuery && matchesPrice && matchesQuantity;
+          return matchesCategory &&
+              matchesQuery &&
+              matchesPrice &&
+              matchesQuantity;
         }).toList();
 
     // Sort
@@ -268,18 +328,22 @@ class ProductController extends GetxController {
   }
 
   void resetFilters() {
-    priceRange.value = const RangeValues(50, 500);
+    priceRange.value = const RangeValues(0, 1000000);
     selectedQuantityIndex.value = 0;
     selectedSortIndex.value = 0;
   }
 
-  Future<bool> reportAd(String productId, String reason) async {
+  Future<bool> reportAd({
+    required String productId,
+    required String reason,
+    String? comment,
+  }) async {
     try {
       final apiService = Get.find<ApiService>();
       final formData = dio.FormData.fromMap({
         'product_id': productId,
         'reason': reason,
-        'comment': reason, // Mapping reason to comment as well for robustness
+        'comment': comment ?? '',
       });
 
       final response = await apiService.reportAd(formData);

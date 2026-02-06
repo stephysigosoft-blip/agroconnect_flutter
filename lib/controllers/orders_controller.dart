@@ -310,6 +310,7 @@ class OrdersController extends GetxController {
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
 
         // Refresh orders list to reflect changes
@@ -319,9 +320,10 @@ class OrdersController extends GetxController {
           l10n.error,
           l10n.orderConfirmedFailed,
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.redAccent,
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       }
     } catch (e) {
@@ -330,9 +332,10 @@ class OrdersController extends GetxController {
         l10n.error,
         'An unexpected error occurred',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.redAccent,
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
     } finally {
       isLoading.value = false;
@@ -365,14 +368,16 @@ class OrdersController extends GetxController {
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
         Get.snackbar(
           l10n.error,
           l10n.disputeSubmittedFailed,
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.redAccent,
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       }
     } catch (e) {
@@ -381,9 +386,10 @@ class OrdersController extends GetxController {
         l10n.error,
         'An unexpected error occurred',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.redAccent,
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
     } finally {
       isLoading.value = false;
@@ -413,6 +419,7 @@ class OrdersController extends GetxController {
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       } else {
         String errMsg = l10n.orderMarkedReceivedFailed;
@@ -423,9 +430,10 @@ class OrdersController extends GetxController {
           l10n.error,
           errMsg,
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.redAccent,
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       }
     } catch (e) {
@@ -433,9 +441,10 @@ class OrdersController extends GetxController {
         'Error',
         'An unexpected error occurred',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.redAccent,
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
     } finally {
       isLoading.value = false;
@@ -466,6 +475,7 @@ class OrdersController extends GetxController {
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       } else {
         String errMsg = l10n.orderDispatchedFailed;
@@ -476,9 +486,10 @@ class OrdersController extends GetxController {
           l10n.error,
           errMsg,
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.redAccent,
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       }
     } catch (e) {
@@ -486,9 +497,10 @@ class OrdersController extends GetxController {
         'Error',
         'An unexpected error occurred',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.redAccent,
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
     } finally {
       isLoading.value = false;
@@ -531,9 +543,10 @@ class OrdersController extends GetxController {
           l10n.error,
           l10n.couldNotFindOrderDetails(actualId),
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.redAccent,
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
         return;
       }
@@ -660,9 +673,10 @@ class OrdersController extends GetxController {
         'Error',
         'An unexpected error occurred while fetching the invoice',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.redAccent,
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
     } finally {
       isLoading.value = false;

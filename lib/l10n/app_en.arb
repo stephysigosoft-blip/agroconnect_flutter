@@ -24,7 +24,7 @@
   "@loginOrSignUp": {
     "description": "Section title for login/register"
   },
-  "enterWhatsappNumber": "Enter your whatsapp number",
+  "enterWhatsappNumber": "Enter your WhatsApp number",
   "@enterWhatsappNumber": {
     "description": "Placeholder for phone number input"
   },
@@ -153,7 +153,7 @@
   "submit": "Submit",
   "relatedAds": "Related Ads",
   "noDescription": "No description available for this product.",
-  "yourOfferPrice": "Your Offer Price (MRU)",
+  "yourOfferPrice": "Your Offer Price (MRU/Kg)",
   "success": "Success",
   "error": "Error",
   "required": "Required",
@@ -410,12 +410,12 @@
   },
   "searchProductsHint": "Search Products",
   "quantityRange": "Quantity Range",
-  "anyQuantity": "Any quantity",
+  "anyQuantity": "Any Quantity",
   "priceRangeLabel": "Price Range",
   "to": "To",
   "sortBy": "Sort By",
   "relevance": "Relevance",
-  "recentlyPosted": "Recently posted",
+  "recentlyPosted": "Recently Posted",
   "newestFirst": "Newest First",
   "clearAll": "Clear All",
   "apply": "Apply",

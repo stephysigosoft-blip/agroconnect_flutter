@@ -22,6 +22,16 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
+    final isGuest = prefs.getBool('is_guest') ?? false;
+
+    if (isGuest) {
+      // Guest login is not retained, clear and show language selection
+      await prefs.remove('is_guest');
+      await prefs.remove('auth_token');
+      Get.offAllNamed('/languageSelection');
+      return;
+    }
+
     final token = prefs.getString('auth_token');
 
     if (token != null && token.isNotEmpty) {

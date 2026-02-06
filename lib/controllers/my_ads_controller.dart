@@ -172,6 +172,8 @@ class MyAdsController extends GetxController {
         backgroundColor: Colors.blueAccent,
         colorText: Colors.white,
         duration: const Duration(seconds: 1),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       isLoading.value = true;
       final apiService = Get.find<ApiService>();
@@ -185,6 +187,8 @@ class MyAdsController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
         fetchMyAds(); // Refresh
       } else {
@@ -204,6 +208,8 @@ class MyAdsController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.redAccent,
           colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       }
     } finally {
@@ -222,6 +228,8 @@ class MyAdsController extends GetxController {
         backgroundColor: Colors.blueAccent,
         colorText: Colors.white,
         duration: const Duration(seconds: 1),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       isLoading.value = true;
       final apiService = Get.find<ApiService>();
@@ -235,6 +243,8 @@ class MyAdsController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
         fetchMyAds(); // Refresh
       } else {
@@ -254,6 +264,8 @@ class MyAdsController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.redAccent,
           colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       }
     } finally {
@@ -272,6 +284,8 @@ class MyAdsController extends GetxController {
         backgroundColor: Colors.blueAccent,
         colorText: Colors.white,
         duration: const Duration(seconds: 1),
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
       );
       isLoading.value = true;
       final apiService = Get.find<ApiService>();
@@ -285,6 +299,8 @@ class MyAdsController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF1B834F),
           colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
         fetchMyAds(); // Refresh
       } else {
@@ -304,6 +320,8 @@ class MyAdsController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.redAccent,
           colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
       }
     } finally {
@@ -317,6 +335,7 @@ class MyAdsController extends GetxController {
     required String description,
     required String pricePerKg,
     required String quantity,
+    int? categoryId,
   }) async {
     try {
       final l10n = AppLocalizations.of(Get.context!)!;
@@ -328,6 +347,7 @@ class MyAdsController extends GetxController {
         'description': description,
         'price_per_kg': pricePerKg,
         'quantity': quantity,
+        if (categoryId != null) 'category_id': categoryId,
       });
 
       final response = await apiService.updateAd(adId, formData);
@@ -368,6 +388,8 @@ class MyAdsController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.redAccent,
           colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
         );
         return false;
       }
